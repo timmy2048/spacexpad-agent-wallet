@@ -1,0 +1,16 @@
+{
+  "privyAppId": "cmwqh29x000hj0glajlwjht0s",
+  "privyClientId": "",
+  "bridgeUrl": "http://127.0.0.1:47321",
+  "bridgeToken": "",
+  "rpc": {
+    "solana:mainnet": "https://api.mainnet-beta.solana.com",
+    "solana:devnet": "https://api.devnet.solana.com",
+    "ethereum:mainnet": "https://ethereum-rpc.publicnode.com",
+    "ethereum:testnet": "https://ethereum-sepolia-rpc.publicnode.com",
+    "base:mainnet": "https://base-rpc.publicnode.com",
+    "base:testnet": "https://base-sepolia-rpc.publicnode.com",
+    "bnb:mainnet": "https://bsc-rpc.publicnode.com",
+    "bnb:testnet": "https://bsc-testnet-rpc.publicnode.com"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "spacexpad-agent-wallet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/gen-icons.mjs",
+    "test": "node --experimental-strip-types --test \"shared/**/*.test.ts\" \"src/**/*.test.ts\" \"mcp/**/*.test.ts\"",
+    "prebuild": "node scripts/gen-icons.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/copy-config.mjs",
+    "mcp": "node --experimental-strip-types mcp/src/index.ts",
+    "check": "node scripts/check-constraints.mjs"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@privy-io/react-auth": "^3.15.0",
+    "@solana-program/memo": "^0.8.0",
+    "@solana-program/system": "^0.8.1",
+    "@solana-program/token": "^0.6.0",
+    "@solana/kit": "^3.0.3",
+    "@solana/web3.js": "^1.98.4",
+    "buffer": "^6.0.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "viem": "^2.43.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.31",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "sharp": "^0.34.5",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1"
+  }
+}

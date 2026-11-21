@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "SpaceXpad agent wallet",
+  "version": "0.1.0",
+  "description": "Keyless multi-chain wallet for agents. Privy holds the keys. You set the risk policy.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx2JdhKyE/T313HY7WsKSAAfFBA4T8PQ6ygo8OjWss8N+z1jPQ9A+fAJxl+91LyUtvq5ujh2nqZGDk/td2kpCT4r0ExVKBg8Mz4iBQda1OgUIZmH6AA8h8G4YPt8bmuHO/FBBlLXfSTJnvbzu5fl27w+ESwsYv8unfauzimAH174HNy64kFM9LXRpGhU6Vk+ml5bhkJF8wod92NOQcjexvtkZKr6MQ/51NSkPo/lax8T7U4I3mtovBPwKg+/scPJ5kinIKrnbhCUYSpvAJckvyV6CSnT9HC3o+lvcT23KSWVLOve4VlWQ56FzOcMPmtCK3OfiQHvDuygg2P70KaNX4QIDAQAB",
+  "action": {
+    "default_title": "SpaceXpad agent wallet",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage", "identity", "offscreen", "alarms"],
+  "host_permissions": [
+    "https://auth.privy.io/*",
+    "https://api.privy.io/*",
+    "https://*.privy.io/*",
+    "https://*.rpc.privy.systems/*",
+    "https://api.mainnet-beta.solana.com/*",
+    "https://api.devnet.solana.com/*",
+    "https://ethereum-rpc.publicnode.com/*",
+    "https://ethereum-sepolia-rpc.publicnode.com/*",
+    "https://base-rpc.publicnode.com/*",
+    "https://base-sepolia-rpc.publicnode.com/*",
+    "https://bsc-rpc.publicnode.com/*",
+    "https://bsc-testnet-rpc.publicnode.com/*",
+    "https://eth.blockscout.com/*",
+    "https://eth-sepolia.blockscout.com/*",
+    "https://base.blockscout.com/*",
+    "https://base-sepolia.blockscout.com/*",
+    "https://bsc.blockscout.com/*",
+    "https://bsc-testnet.blockscout.com/*",
+    "https://coins.llama.fi/*",
+    "http://127.0.0.1:47321/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-ancestors 'none';"
+  }
+}
