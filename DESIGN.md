@@ -48,7 +48,7 @@ The popup is 400px by 600px, inside the 380–400px extension width these three 
 
 Radix Slate roles, not a component library: background Slate 1 `#111113`, raised strip Slate 2 `#18191b`, line Slate 6 `#363a3f`, text Slate 12 `#edeef0`, secondary Slate 11 `#b0b4ba`. Accent `#8ec8d4` is only the focus ring, the current nav tick, and the native progress bar. Danger text `#ff9592`. One 160ms ease. `prefers-reduced-motion: reduce` removes it.
 
-No glow, no grid, no gradient text, no nested cards, no invented USD total, no invented activity. The address disclosure opens on hover, focus, and click because `interestfor` / `popover="hint"` is still limited and a polyfill would be extra extension code. Copy buttons are in tab order. Escape returns focus to the account button.
+No glow, no grid, no gradient text, no nested cards, no invented USD total, no invented activity. The four addresses are hidden until the pointer hovers the display name, or the keyboard focuses that button. The panel is an overlay, not a block in the asset list. `interestfor` / `popover="hint"` is still limited, so this is a plain disclosure. Copy buttons are in tab order. Escape returns focus to the account button.
 
 The toolbar icon is the SpaceXpad X avatar at `assets/spacexpad-x-avatar.png`, a 1024×1024 PNG upscaled from the 192px frontend mark. `scripts/gen-icons.mjs` fits that file to 16, 32, 48, and 128 and stops if the file is missing. It does not draw a replacement and it does not read a rocket SVG.
 

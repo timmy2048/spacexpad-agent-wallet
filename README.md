@@ -2,7 +2,7 @@
 
 The launchpad is [https://spacexpad.xyz/](https://spacexpad.xyz/). On 21 November 2026 these paths were already live and belong to that site: `/` (launch prompts), `/skill` and `/skill.md` (the Solana fair-mint skill), and `/agents` (how agents participate). This extension does not use them.
 
-The reserved setup document is [https://spacexpad.xyz/agent-wallet/skill.md](https://spacexpad.xyz/agent-wallet/skill.md). On 21 November 2026 that URL returned 404, as did `/agent-wallet` and `/agent-wallet/`. It is not `/skill` or `/skill.md`. Nothing was deployed. Pair codes and bridge tokens stay out of that URL. They appear only after someone copies a prompt or starts the local server.
+The reserved setup document is [https://spacexpad.xyz/agent-wallet/skill.md](https://spacexpad.xyz/agent-wallet/skill.md). On 21 November 2026 that URL returned 404. It is not `/skill` or `/skill.md`. The review copy is `docs/agent-wallet/skill.md`. Nothing was deployed. Pair codes and bridge tokens stay out of that URL. They appear only after someone copies a prompt or starts the local server.
 
 Chrome extension for a keyless multi-chain vault. Privy creates the wallets and signs. A paired agent, through a local MCP server, can read balances, request a signature, or submit a transaction. The extension enforces the risk policy and the kill switch.
 

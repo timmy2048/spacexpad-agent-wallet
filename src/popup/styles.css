@@ -118,15 +118,17 @@ input, textarea { caret-color: var(--accent); }
 .at { color: var(--muted); }
 
 .popover {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  margin: 6px 0 10px;
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
   padding: 4px 0 2px;
-  background: var(--bg-2);
+  background: #18191b;
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
   animation: rise var(--motion) var(--ease);
 }
 
@@ -144,6 +146,7 @@ input, textarea { caret-color: var(--accent); }
   align-items: center;
   min-height: 36px;
   padding: 4px 12px;
+  background: #18191b;
   font-size: 13px;
   transition: background-color var(--motion) var(--ease);
 }
