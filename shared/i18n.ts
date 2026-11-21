@@ -22,13 +22,15 @@ const EN = {
   save: 'Save',
   settings: 'Settings',
   username: 'Username',
-  usernameHint: 'Shown after login. Not asked on the sign-in screen.',
+  usernameHint: 'A display name on this device. Other people can use the same one. Sign-in uses your Privy id, not this name.',
   language: 'Language',
   assets: 'Assets',
-  notReadYet: 'Not read yet. An agent names mainnet or testnet on each request.',
+  mainnetHint: 'Mainnet balances. A zero was read. A failed network stays an error.',
+  readingMainnet: 'Reading mainnet…',
+  explicitNetwork: 'Shown because an agent asked for this network.',
   agents: 'Agents',
   bindTitle: 'Bind an agent',
-  bindIntro: 'Copy the prompt into the agent, then paste the spx_bind_ token it returns.',
+  bindIntro: 'Copy the prompt. It reserves https://spacexpad.xyz/agent-wallet/ and includes the local MCP command. That page is not published. Paste the spx_bind_ token. The code expires in 10 minutes.',
   copyPrompt: 'Copy prompt',
   promptCopied: 'Prompt copied',
   showPrompt: 'Show prompt',
@@ -58,7 +60,7 @@ const EN = {
   remove: 'Remove',
   bridge: 'Agent bridge',
   bridgeToken: 'Bridge token',
-  bridgeHelp: 'Start the MCP server and paste the bridge token it prints. Signing stays off until it matches.',
+  bridgeHelp: 'From this repo run node --experimental-strip-types mcp/src/index.ts. Paste the bridge token from stderr. It is also in ~/.spacexpad-agent-wallet/bridge.json. Do not share it.',
   bridgeConnected: 'Bridge connected',
   bridgeDisconnected: 'Bridge not connected',
   bridgeRejected: 'Bridge token was rejected',
@@ -79,6 +81,22 @@ const EN = {
   walletNotReady: 'Wallets are not ready yet.',
   optional: 'Optional',
   clientIdHint: 'From the Privy dashboard, if your app client requires one.',
+  navWallet: 'Wallet',
+  navAgent: 'Agent',
+  navActivity: 'Activity',
+  navSettings: 'Settings',
+  primaryNav: 'Primary',
+  mainnet: 'Mainnet',
+  showAddresses: 'Wallet addresses',
+  confirmTestnet: 'Confirm test network',
+  rejectTestnet: 'Reject',
+  pairExpiredHint: 'Pairing codes last 10 minutes and can be removed.',
+  noAgentsBound: 'No agent is bound. Copy a prompt to start.',
+  bridgeMissing: 'The local MCP server is not connected.',
+  savedQuiet: 'Saved on this device.',
+  methodBalance: 'Balance',
+  methodSign: 'Sign',
+  methodSend: 'Send',
 } as const;
 
 export type CopyKey = keyof typeof EN;
@@ -105,13 +123,15 @@ const ZH_CN: Record<CopyKey, string> = {
   save: '保存',
   settings: '设置',
   username: '用户名',
-  usernameHint: '登录后才能改。登录页不要求填写。',
+  usernameHint: '只显示在这台设备上。别人也可以用同样的名字。登录用的是 Privy 用户 ID，不是这个名字。',
   language: '语言',
   assets: '资产',
-  notReadYet: '尚未读取。每次请求由代理指定主网或测试网。',
+  mainnetHint: '这里是主网余额。0 表示已经读到。网络失败会显示错误，不会当成 0。',
+  readingMainnet: '正在读取主网…',
+  explicitNetwork: '因为代理指定了这个网络，所以单独显示。',
   agents: '代理',
   bindTitle: '绑定代理',
-  bindIntro: '把提示词交给代理，再把返回的 spx_bind_ 令牌贴回来。',
+  bindIntro: '复制提示词。预留地址是 https://spacexpad.xyz/agent-wallet/，页面还没发布。提示词里是本机 MCP 命令。再贴回 spx_bind_ 令牌。配对码 10 分钟后失效。',
   copyPrompt: '复制提示词',
   promptCopied: '提示词已复制',
   showPrompt: '查看提示词',
@@ -140,7 +160,7 @@ const ZH_CN: Record<CopyKey, string> = {
   remove: '移除',
   bridge: '代理桥',
   bridgeToken: '桥令牌',
-  bridgeHelp: '启动 MCP 服务，把打印出的桥令牌贴到这里。匹配之前不会签名。',
+  bridgeHelp: '在这个仓库运行 node --experimental-strip-types mcp/src/index.ts。把标准错误里的桥令牌贴过来。它也会写在 ~/.spacexpad-agent-wallet/bridge.json。不要分享。',
   bridgeConnected: '桥已连接',
   bridgeDisconnected: '桥未连接',
   bridgeRejected: '桥令牌被拒绝',
@@ -161,6 +181,22 @@ const ZH_CN: Record<CopyKey, string> = {
   walletNotReady: '钱包还没准备好。',
   optional: '可选',
   clientIdHint: '如果 Privy 应用客户端要求，从控制台复制。',
+  navWallet: '钱包',
+  navAgent: '代理',
+  navActivity: '活动',
+  navSettings: '设置',
+  primaryNav: '主导航',
+  mainnet: '主网',
+  showAddresses: '钱包地址',
+  confirmTestnet: '确认测试网',
+  rejectTestnet: '拒绝',
+  pairExpiredHint: '配对码 10 分钟内有效，绑定后可以移除。',
+  noAgentsBound: '还没有绑定代理。复制提示词开始。',
+  bridgeMissing: '本机 MCP 服务没有连上。',
+  savedQuiet: '已保存在这台设备上。',
+  methodBalance: '余额',
+  methodSign: '签名',
+  methodSend: '发送',
 };
 
 const ZH_TW: Record<CopyKey, string> = {
@@ -185,13 +221,15 @@ const ZH_TW: Record<CopyKey, string> = {
   save: '儲存',
   settings: '設定',
   username: '使用者名稱',
-  usernameHint: '登入後才能改。登入畫面不會要求填寫。',
+  usernameHint: '只顯示在這台裝置上。別人也可以用同樣的名稱。登入用的是 Privy 使用者 ID，不是這個名稱。',
   language: '語言',
   assets: '資產',
-  notReadYet: '尚未讀取。每次請求由代理指定主網或測試網。',
+  mainnetHint: '這裡是主網餘額。0 表示已經讀到。網路失敗會顯示錯誤，不會當成 0。',
+  readingMainnet: '正在讀取主網…',
+  explicitNetwork: '因為代理指定了這個網路，所以另外顯示。',
   agents: '代理',
   bindTitle: '綁定代理',
-  bindIntro: '把提示詞交給代理，再貼回它回傳的 spx_bind_ 權杖。',
+  bindIntro: '複製提示詞。預留網址是 https://spacexpad.xyz/agent-wallet/，頁面還沒發布。提示詞裡是本機 MCP 指令。再貼回 spx_bind_ 權杖。配對碼 10 分鐘後失效。',
   copyPrompt: '複製提示詞',
   promptCopied: '提示詞已複製',
   showPrompt: '查看提示詞',
@@ -220,7 +258,7 @@ const ZH_TW: Record<CopyKey, string> = {
   remove: '移除',
   bridge: '代理橋',
   bridgeToken: '橋接權杖',
-  bridgeHelp: '啟動 MCP 伺服器，把印出的橋接權杖貼在這裡。相符之前不會簽名。',
+  bridgeHelp: '在這個儲存庫執行 node --experimental-strip-types mcp/src/index.ts。把標準錯誤裡的橋接權杖貼過來。它也會寫入 ~/.spacexpad-agent-wallet/bridge.json。不要分享。',
   bridgeConnected: '橋已連線',
   bridgeDisconnected: '橋未連線',
   bridgeRejected: '橋接權杖被拒絕',
@@ -241,6 +279,22 @@ const ZH_TW: Record<CopyKey, string> = {
   walletNotReady: '錢包還沒準備好。',
   optional: '選填',
   clientIdHint: '如果 Privy 應用用戶端需要，從控制台複製。',
+  navWallet: '錢包',
+  navAgent: '代理',
+  navActivity: '活動',
+  navSettings: '設定',
+  primaryNav: '主要導覽',
+  mainnet: '主網',
+  showAddresses: '錢包位址',
+  confirmTestnet: '確認測試網',
+  rejectTestnet: '拒絕',
+  pairExpiredHint: '配對碼 10 分鐘內有效，綁定後可以移除。',
+  noAgentsBound: '尚未綁定代理。複製提示詞開始。',
+  bridgeMissing: '本機 MCP 伺服器沒有連上。',
+  savedQuiet: '已儲存在這台裝置上。',
+  methodBalance: '餘額',
+  methodSign: '簽名',
+  methodSend: '送出',
 };
 
 const TABLES: Record<Lang, Record<CopyKey, string>> = {
@@ -264,6 +318,26 @@ export function chainName(lang: Lang, chain: ChainId): string {
     'zh-TW': { solana: 'Solana', ethereum: 'Ethereum', base: 'Base', bnb: 'BNB Chain' },
   };
   return names[lang][chain];
+}
+
+export function testnetConfirmCopy(
+  lang: Lang,
+  method: 'sign' | 'send',
+  agent: string,
+  chain: ChainId,
+  network: NetworkId,
+): string {
+  const where = `${chainName(lang, chain)} ${clusterLabel(lang, chain, network)}`;
+  if (lang === 'zh-CN') {
+    const action = method === 'send' ? '发送' : '签名';
+    return `${agent} 请求在 ${where} ${action}。这是测试网，确认后才会继续。`;
+  }
+  if (lang === 'zh-TW') {
+    const action = method === 'send' ? '送出' : '簽名';
+    return `${agent} 要求在 ${where} ${action}。這是測試網，確認後才會繼續。`;
+  }
+  const action = method === 'send' ? 'send' : 'sign';
+  return `${agent} asked to ${action} on ${where}. This is a test network. Nothing is signed until you confirm.`;
 }
 
 export function clusterLabel(lang: Lang, chain: ChainId, network: NetworkId): string {

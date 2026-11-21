@@ -4,21 +4,25 @@ import { serializeTransaction, type Hex } from 'viem';
 import { buildAssetGroups, nativeAsset, parseBlockscoutTokens, parseSolanaTokenAccounts } from './assets.ts';
 import { resolveCluster } from './chains.ts';
 import { evmCallFromSerialized, evmDestinations } from './evmIntent.ts';
-import { copyKeys } from './i18n.ts';
+import { copyKeys, t } from './i18n.ts';
 import { evaluatePolicy } from './policy.ts';
-import { buildPairPrompt } from './prompt.ts';
+import { buildPairPrompt, MCP_TOOL_NAMES } from './prompt.ts';
+import { isDisplayName } from './store.ts';
 import { DEFAULT_POLICY } from './types.ts';
 import { CHAIN_ORDER } from './types.ts';
 import { embeddedPresence, missingEmbeddedWallets } from './wallets.ts';
 
 describe('networks', () => {
-  it('requires the agent to name a cluster', () => {
-    assert.throws(() => resolveCluster('solana', ''), /no default/);
-    assert.throws(() => resolveCluster('solana', 'testnet'), /devnet/);
-    assert.throws(() => resolveCluster('base', 'devnet'), /testnet/);
+  it('uses mainnet when the cluster is omitted and keeps an explicit test network', () => {
+    assert.equal(resolveCluster('solana', '').network, 'mainnet');
+    assert.equal(resolveCluster('ethereum', undefined).network, 'mainnet');
+    assert.equal(resolveCluster('base', null).rpcKey, 'base:mainnet');
     assert.equal(resolveCluster('solana', 'devnet').clusterName, 'Devnet');
     assert.equal(resolveCluster('ethereum', 'testnet').clusterName, 'Sepolia');
     assert.equal(resolveCluster('bnb', 'mainnet').chainId, 56);
+    assert.throws(() => resolveCluster('solana', 'testnet'), /devnet/);
+    assert.throws(() => resolveCluster('base', 'devnet'), /testnet/);
+    assert.throws(() => resolveCluster('ethereum', 'sepolia'), /mainnet/);
   });
 
   it('lists only the four supported chains', () => {
@@ -27,16 +31,16 @@ describe('networks', () => {
 });
 
 describe('assets', () => {
-  it('shows every chain at zero before any read', () => {
+  it('does not invent a zero before mainnet is read', () => {
     const groups = buildAssetGroups([]);
     assert.deepEqual(
       groups.map((group) => group.chain),
       ['solana', 'ethereum', 'base', 'bnb'],
     );
     for (const group of groups) {
-      assert.equal(group.clusters[0]?.status, 'unread');
-      assert.equal(group.clusters[0]?.assets[0]?.amount, '0');
-      assert.equal(group.clusters[0]?.assets[0]?.native, true);
+      assert.equal(group.clusters[0]?.network, 'mainnet');
+      assert.equal(group.clusters[0]?.status, 'absent');
+      assert.equal(group.clusters[0]?.assets.length, 0);
     }
   });
 
@@ -65,9 +69,12 @@ describe('assets', () => {
       },
     ]);
     const base = groups.find((group) => group.chain === 'base');
-    assert.equal(base?.clusters[0]?.assets[0]?.amount, '0');
-    assert.equal(base?.clusters[0]?.assets[1]?.symbol, 'USDC');
-    assert.equal(groups.find((group) => group.chain === 'solana')?.clusters[0]?.status, 'unread');
+    assert.equal(base?.clusters[0]?.network, 'mainnet');
+    assert.equal(base?.clusters[0]?.status, 'absent');
+    assert.equal(base?.clusters[1]?.network, 'testnet');
+    assert.equal(base?.clusters[1]?.assets[0]?.amount, '0');
+    assert.equal(base?.clusters[1]?.assets[1]?.symbol, 'USDC');
+    assert.equal(groups.find((group) => group.chain === 'solana')?.clusters[0]?.status, 'absent');
   });
 
   it('parses token lists and skips empty balances', () => {
@@ -152,15 +159,37 @@ describe('embedded wallets', () => {
 });
 
 describe('prompt and copy', () => {
-  it('tells the agent there is no default network', () => {
+  it('tells the agent how to run the local MCP server and that mainnet is the default', () => {
     const prompt = buildPairPrompt('ABCD2345');
     assert.match(prompt, /PAIR_CODE: ABCD2345/);
-    assert.match(prompt, /no default chain and no default network/);
-    assert.match(prompt, /spx_bind_/);
+    assert.match(prompt, /node --experimental-strip-types mcp\/src\/index.ts/);
+    assert.match(prompt, /127\.0\.0\.1:47321/);
+    assert.match(prompt, /omit network to use mainnet/i);
+    assert.match(prompt, /https:\/\/spacexpad\.xyz\/agent-wallet\//);
+    assert.match(prompt, /\/skill/);
+    assert.match(prompt, /not published/);
+    assert.match(prompt, /no hosted wallet endpoint/i);
+    assert.doesNotMatch(prompt, /https?:\/\/(?!(127\.0\.0\.1|spacexpad\.xyz))/);
+    for (const name of MCP_TOOL_NAMES) assert.match(prompt, new RegExp(name));
+    assert.equal(prompt.includes('尚未读取'), false);
   });
 
-  it('keeps translations aligned', () => {
+  it('keeps translations aligned and drops the unread placeholder', () => {
     assert.ok(copyKeys().length > 20);
+    for (const key of copyKeys()) {
+      for (const lang of ['en', 'zh-CN', 'zh-TW'] as const) {
+        const line = t(lang, key);
+        assert.equal(line.includes('尚未读取'), false);
+        assert.equal(line.includes('尚未讀取'), false);
+        assert.equal(line.includes('Not read yet'), false);
+      }
+    }
+  });
+
+  it('checks display-name shape only', () => {
+    assert.equal(isDisplayName('ada'), true);
+    assert.equal(isDisplayName('a'), false);
+    assert.equal(isDisplayName('ada lovelace'), false);
   });
 });
 

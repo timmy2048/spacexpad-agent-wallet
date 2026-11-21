@@ -1,5 +1,6 @@
 node_modules
 dist
+preview-dist
 config.json
 *.pem
 .DS_Store

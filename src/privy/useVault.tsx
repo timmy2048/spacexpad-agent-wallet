@@ -158,7 +158,7 @@ export function useVault() {
       const signed = await signSolRef.current({
         transaction: bytes,
         wallet,
-        chain: params.network === 'mainnet' ? 'solana:mainnet' : 'solana:devnet',
+        chain: params.network === 'devnet' ? 'solana:devnet' : 'solana:mainnet',
       });
       const signedTransaction = encodeBase64(signed.signedTransaction);
       if (method === 'sign') return { signedTransaction };

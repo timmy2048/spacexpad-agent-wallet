@@ -5,8 +5,8 @@ import { CHAIN_ORDER } from './types.ts';
 
 export type ClusterView = {
   chain: ChainId;
-  network: NetworkId | null;
-  status: 'unread' | 'ready' | 'error';
+  network: NetworkId;
+  status: 'absent' | 'ready' | 'error';
   error: string | null;
   tokenListError: string | null;
   assets: Asset[];
@@ -33,36 +33,31 @@ export function nativeAsset(chain: ChainId, raw: bigint): Asset {
 
 export function buildAssetGroups(snapshots: Snapshot[]): ChainGroup[] {
   return CHAIN_ORDER.map((chain) => {
-    const mine = snapshots
-      .filter((snapshot) => snapshot.chain === chain)
+    const main = snapshots.find((snapshot) => snapshot.chain === chain && snapshot.network === 'mainnet');
+    const extras = snapshots
+      .filter((snapshot) => snapshot.chain === chain && snapshot.network !== 'mainnet')
       .sort((a, b) => networkRank(a.network) - networkRank(b.network));
-    if (mine.length === 0) {
-      return {
-        chain,
-        clusters: [
-          {
-            chain,
-            network: null,
-            status: 'unread',
-            error: null,
-            tokenListError: null,
-            assets: [nativeAsset(chain, 0n)],
-          },
-        ],
-      };
-    }
-    return {
-      chain,
-      clusters: mine.map((snapshot) => ({
-        chain,
-        network: snapshot.network,
-        status: snapshot.status,
-        error: snapshot.error,
-        tokenListError: snapshot.tokenListError,
-        assets: ensureNative(chain, snapshot.assets),
-      })),
-    };
+    const clusters: ClusterView[] = [
+      main ? viewFrom(chain, main) : absentMainnet(chain),
+      ...extras.map((snapshot) => viewFrom(chain, snapshot)),
+    ];
+    return { chain, clusters };
   });
+}
+
+function absentMainnet(chain: ChainId): ClusterView {
+  return { chain, network: 'mainnet', status: 'absent', error: null, tokenListError: null, assets: [] };
+}
+
+function viewFrom(chain: ChainId, snapshot: Snapshot): ClusterView {
+  return {
+    chain,
+    network: snapshot.network,
+    status: snapshot.status,
+    error: snapshot.error,
+    tokenListError: snapshot.tokenListError,
+    assets: snapshot.status === 'error' ? [] : ensureNative(chain, snapshot.assets),
+  };
 }
 
 function ensureNative(chain: ChainId, assets: Asset[]): Asset[] {

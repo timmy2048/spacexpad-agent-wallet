@@ -128,24 +128,22 @@ export function isChainId(value: string): value is ChainId {
   return (CHAIN_ORDER as readonly string[]).includes(value);
 }
 
-export function resolveCluster(chain: ChainId, network: string): Cluster {
+export function resolveCluster(chain: ChainId, network?: string | null): Cluster {
+  const requested = (network ?? '').trim().toLowerCase();
+  const selected = requested.length === 0 ? 'mainnet' : requested;
   if (chain === 'solana') {
-    if (network === 'testnet') {
-      throw new Error(
-        'Solana has no default cluster. Pass network "devnet" or "mainnet". "testnet" is not used.',
-      );
+    if (selected === 'testnet') {
+      throw new Error('Solana does not use "testnet" here. Omit network for mainnet, or pass "devnet".');
     }
-    if (network !== 'mainnet' && network !== 'devnet') {
-      throw new Error('Pass network "mainnet" or "devnet" for Solana. There is no default.');
+    if (selected !== 'mainnet' && selected !== 'devnet') {
+      throw new Error('Pass "devnet" for Solana test traffic, or omit network to use mainnet.');
     }
-  } else if (network === 'devnet') {
-    throw new Error(
-      `${chain} has no devnet here. Pass network "mainnet" or "testnet". There is no default.`,
-    );
-  } else if (network !== 'mainnet' && network !== 'testnet') {
-    throw new Error('Pass network "mainnet" or "testnet". There is no default.');
+  } else if (selected === 'devnet') {
+    throw new Error(`${chain} has no devnet here. Omit network for mainnet, or pass "testnet".`);
+  } else if (selected !== 'mainnet' && selected !== 'testnet') {
+    throw new Error('Omit network to use mainnet, or pass "testnet".');
   }
-  const cluster = CLUSTERS[`${chain}:${network}`];
+  const cluster = CLUSTERS[`${chain}:${selected}`];
   if (!cluster) throw new Error(`Unsupported chain ${chain}.`);
   return cluster;
 }

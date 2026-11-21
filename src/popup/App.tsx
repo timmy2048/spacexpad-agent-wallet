@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import { buildPairPrompt, BIND_TOKEN_PATTERN, createPairCode } from '../../shared/prompt.ts';
+import { BIND_TOKEN_PATTERN, buildPairPrompt, createPairCode } from '../../shared/prompt.ts';
 import { isAllowlistAddress } from '../../shared/money.ts';
-import { hasAppId } from '../../shared/store.ts';
-import { t } from '../../shared/i18n.ts';
+import { hasAppId, isDisplayName } from '../../shared/store.ts';
+import { chainName, clusterLabel, t, testnetConfirmCopy } from '../../shared/i18n.ts';
 import type { Lang, Store } from '../../shared/types.ts';
-import { resolveCluster } from '../../shared/chains.ts';
-import { readClusterBalance } from '../lib/balances.ts';
 import { bridgePost, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
 import { AddressPopover } from '../ui/AddressPopover.tsx';
 import { AssetList } from '../ui/AssetList.tsx';
+import { NavIcon } from '../ui/icons.tsx';
 import { useExtensionStore } from './useStore.ts';
+import { useMainnetBalances } from './useMainnet.ts';
+
+type Tab = 'wallet' | 'agent' | 'activity' | 'settings';
 
 export function App({ surface }: { surface: 'popup' | 'auth' }) {
   const store = useExtensionStore();
+  useEffect(() => {
+    if (!store) return;
+    document.documentElement.lang = store.language;
+  }, [store]);
   if (!store) {
     return (
       <main className="shell">
@@ -36,11 +42,11 @@ function Setup({ store }: { store: Store }) {
   const redirect = `https://${extensionId}.chromiumapp.org/`;
   return (
     <main className="shell">
-      <header className="header">
+      <header className="top">
         <img src={icon()} alt="" />
-        <h1>{t(store.language, 'mark')}</h1>
+        <h1 className="brand">{t(store.language, 'mark')}</h1>
       </header>
-      <div className="main">
+      <div className="body">
         <h2>{t(store.language, 'setupTitle')}</h2>
         <p className="note">{t(store.language, 'setupBody')}</p>
         <p className="note">
@@ -49,19 +55,19 @@ function Setup({ store }: { store: Store }) {
         <p className="note">
           {t(store.language, 'redirectUrl')} {redirect}
         </p>
-        <label className="field">
+        <label className="field" htmlFor="setup-app">
           <span>{t(store.language, 'privyAppId')}</span>
-          <input value={appId} onChange={(event) => setAppId(event.target.value)} autoComplete="off" />
+          <input id="setup-app" value={appId} onChange={(event) => setAppId(event.target.value)} autoComplete="off" />
         </label>
-        <label className="field">
+        <label className="field" htmlFor="setup-client">
           <span>
             {t(store.language, 'privyClientId')} ({t(store.language, 'optional')})
           </span>
-          <input value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" />
+          <input id="setup-client" value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" />
         </label>
         <button
           type="button"
-          className="action"
+          className="primary"
           onClick={() => {
             void updateStore((current) => ({
               ...current,
@@ -149,32 +155,22 @@ function Login({
         <img src={icon()} alt="" />
         <h1>{t(lang, 'appName')}</h1>
         <p className="note">{t(lang, 'loginNote')}</p>
-        <button
-          type="button"
-          className="action"
-          onClick={() => {
-            if (surface === 'auth') {
-              void vault.googleLogin.initOAuth({ provider: 'google' });
-              return;
-            }
-            void chrome.windows.create({
-              url: chrome.runtime.getURL('auth.html'),
-              type: 'popup',
-              width: 420,
-              height: 720,
-              focused: true,
-            });
-          }}
-        >
+        <button type="button" className="primary" onClick={() => void startGoogle(surface, vault)}>
           {t(lang, 'continueGmail')}
         </button>
-        <label className="field">
+        <label className="field" htmlFor="login-email">
           <span>{t(lang, 'email')}</span>
-          <input type="email" value={email} autoComplete="email" onChange={(event) => setEmail(event.target.value)} />
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            autoComplete="email"
+            onChange={(event) => setEmail(event.target.value)}
+          />
         </label>
         <button
           type="button"
-          className="action"
+          className="secondary"
           disabled={busy || !email.includes('@')}
           onClick={() => {
             setError(null);
@@ -183,13 +179,19 @@ function Login({
         >
           {t(lang, 'sendCode')}
         </button>
-        <label className="field">
+        <label className="field" htmlFor="login-code">
           <span>{t(lang, 'code')}</span>
-          <input value={code} inputMode="numeric" autoComplete="one-time-code" onChange={(event) => setCode(event.target.value)} />
+          <input
+            id="login-code"
+            value={code}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            onChange={(event) => setCode(event.target.value)}
+          />
         </label>
         <button
           type="button"
-          className="action"
+          className="secondary"
           disabled={busy || code.trim().length < 4}
           onClick={() => {
             setError(null);
@@ -199,7 +201,11 @@ function Login({
           {t(lang, 'confirmCode')}
         </button>
         {notice ? <p className="note">{notice}</p> : null}
-        {error ? <p className="error">{error}</p> : null}
+        {error ? (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
     </main>
   );
@@ -222,13 +228,136 @@ function Login({
   }
 }
 
+async function startGoogle(surface: 'popup' | 'auth', vault: ReturnType<typeof useVault>): Promise<void> {
+  if (surface === 'auth') {
+    await vault.googleLogin.initOAuth({ provider: 'google' });
+    return;
+  }
+  await chrome.windows.create({
+    url: chrome.runtime.getURL('auth.html'),
+    type: 'popup',
+    width: 420,
+    height: 720,
+    focused: true,
+  });
+}
+
 function Console({ store, logout }: { store: Store; logout: () => void }) {
   const lang = store.language;
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>('wallet');
+  const balances = useMainnetBalances(store);
+  const walletsReady = Boolean(store.addresses?.solana || store.addresses?.evm);
+
+  return (
+    <main className="shell">
+      <header className="top">
+        <img src={icon()} alt="" />
+        <div>
+          <h1 className="brand">{t(lang, 'mark')}</h1>
+          <p className="cluster-label">{t(lang, 'mainnet')}</p>
+        </div>
+      </header>
+      {store.policy.agentsPaused ? (
+        <div className="banner">
+          <p>{t(lang, 'paused')}</p>
+          <button
+            type="button"
+            className="quiet-button"
+            onClick={() => {
+              void updateStore((current) => ({ ...current, policy: { ...current.policy, agentsPaused: false } }));
+            }}
+          >
+            {t(lang, 'resume')}
+          </button>
+        </div>
+      ) : null}
+      {store.pendingApproval ? (
+        <div className="banner">
+          <p>
+            {testnetConfirmCopy(
+              lang,
+              store.pendingApproval.method,
+              store.pendingApproval.agentName,
+              store.pendingApproval.chain,
+              store.pendingApproval.network,
+            )}
+          </p>
+          <div className="actions">
+            <button type="button" className="quiet-button" onClick={() => void decide(store.pendingApproval?.id ?? '', false)}>
+              {t(lang, 'rejectTestnet')}
+            </button>
+            <button type="button" className="quiet-button" onClick={() => void decide(store.pendingApproval?.id ?? '', true)}>
+              {t(lang, 'confirmTestnet')}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <div className="body">
+        {store.vaultError ? (
+          <p className="error" role="alert">
+            {store.vaultError}
+          </p>
+        ) : null}
+        {tab === 'wallet' ? (
+          <>
+            <AddressPopover
+              lang={lang}
+              username={store.username}
+              solana={store.addresses?.solana ?? null}
+              evm={store.addresses?.evm ?? null}
+            />
+            <AssetList
+              lang={lang}
+              snapshots={store.snapshots}
+              pending={balances.pending}
+              walletsReady={walletsReady}
+              onRefresh={walletsReady ? balances.refresh : null}
+            />
+          </>
+        ) : null}
+        {tab === 'agent' ? <AgentPanel store={store} /> : null}
+        {tab === 'activity' ? <ActivityPanel store={store} /> : null}
+        {tab === 'settings' ? <Settings store={store} logout={logout} /> : null}
+      </div>
+      <nav className="nav" aria-label={t(lang, 'primaryNav')}>
+        <NavButton id="wallet" tab={tab} lang={lang} label="navWallet" onSelect={setTab} />
+        <NavButton id="agent" tab={tab} lang={lang} label="navAgent" onSelect={setTab} />
+        <NavButton id="activity" tab={tab} lang={lang} label="navActivity" onSelect={setTab} />
+        <NavButton id="settings" tab={tab} lang={lang} label="navSettings" onSelect={setTab} />
+      </nav>
+    </main>
+  );
+}
+
+function NavButton({
+  id,
+  tab,
+  lang,
+  label,
+  onSelect,
+}: {
+  id: Tab;
+  tab: Tab;
+  lang: Lang;
+  label: 'navWallet' | 'navAgent' | 'navActivity' | 'navSettings';
+  onSelect: (tab: Tab) => void;
+}) {
+  const icon = id === 'wallet' ? 'wallet' : id === 'agent' ? 'agent' : id === 'activity' ? 'activity' : 'settings';
+  return (
+    <button type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => onSelect(id)}>
+      <NavIcon name={icon} />
+      {t(lang, label)}
+    </button>
+  );
+}
+
+function AgentPanel({ store }: { store: Store }) {
+  const lang = store.language;
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
+  const prompt = store.pair ? buildPairPrompt(store.pair.code) : '';
 
   const copyPrompt = async () => {
     const code = createPairCode();
@@ -280,165 +409,85 @@ function Console({ store, logout }: { store: Store; logout: () => void }) {
     }
   };
 
-  const refresh = async () => {
-    for (const snapshot of store.snapshots) {
-      const cluster = resolveCluster(snapshot.chain, snapshot.network);
-      const rpcUrl = store.settings.rpc[cluster.rpcKey];
-      if (!rpcUrl) continue;
-      const next = await readClusterBalance({
-        chain: snapshot.chain,
-        network: snapshot.network,
-        solanaAddress: store.addresses?.solana ?? null,
-        evmAddress: store.addresses?.evm ?? null,
-        rpcUrl,
-        now: Date.now(),
-      });
-      await updateStore((current) => ({
-        ...current,
-        snapshots: [
-          ...current.snapshots.filter((item) => item.chain !== next.chain || item.network !== next.network),
-          next,
-        ],
-      }));
-    }
-  };
-
   return (
-    <main className="shell">
-      <header className="header">
-        <img src={icon()} alt="" />
-        <h1>{t(lang, 'mark')}</h1>
-        <button type="button" className="text-action" onClick={() => setSettingsOpen(true)}>
-          {t(lang, 'settings')}
+    <section className="panel" aria-labelledby="agent-title">
+      <h2 id="agent-title">{t(lang, 'bindTitle')}</h2>
+      <p className="note">{store.bridge.connected ? t(lang, 'bridgeConnected') : t(lang, 'bridgeMissing')}</p>
+      {store.bridge.error ? <p className="error">{store.bridge.error}</p> : null}
+      <p className="note">{t(lang, 'bindIntro')}</p>
+      <button type="button" className="primary" onClick={() => void copyPrompt()}>
+        {copied ? t(lang, 'promptCopied') : t(lang, 'copyPrompt')}
+      </button>
+      {prompt ? (
+        <button type="button" className="quiet-button" onClick={() => setShowPrompt((value) => !value)}>
+          {showPrompt ? t(lang, 'hidePrompt') : t(lang, 'showPrompt')}
         </button>
-      </header>
-      <AddressPopover
-        lang={lang}
-        username={store.username}
-        solana={store.addresses?.solana ?? null}
-        evm={store.addresses?.evm ?? null}
-      />
-      {store.policy.agentsPaused ? (
-        <div className="paused">
-          <span>{t(lang, 'paused')}</span>
+      ) : null}
+      {showPrompt && prompt ? <textarea className="prompt" readOnly value={prompt} aria-label={t(lang, 'copyPrompt')} /> : null}
+      <label className="field" htmlFor="bind-token">
+        <span>{t(lang, 'tokenLabel')}</span>
+        <input
+          id="bind-token"
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </label>
+      <button type="button" className="secondary" onClick={() => void bind()}>
+        {t(lang, 'bindAction')}
+      </button>
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <h2>{t(lang, 'agents')}</h2>
+      {store.agents.length === 0 ? <p className="note">{t(lang, 'noAgents')}</p> : null}
+      {store.agents.map((agent) => (
+        <div className="row" key={agent.id}>
+          <span>{agent.name}</span>
           <button
             type="button"
+            className="quiet-button"
             onClick={() => {
-              void updateStore((current) => ({ ...current, policy: { ...current.policy, agentsPaused: false } }));
+              void unbind(store, agent.token);
             }}
           >
-            {t(lang, 'resume')}
+            {t(lang, 'unbind')}
           </button>
         </div>
-      ) : null}
-      <div className="main">
-        {store.vaultError ? <p className="error">{store.vaultError}</p> : null}
-        {store.agents.length === 0 ? (
-          <BindPanel
-            lang={lang}
-            prompt={store.pair ? buildPairPrompt(store.pair.code) : ''}
-            showPrompt={showPrompt}
-            copied={copied}
-            token={token}
-            error={error}
-            onTogglePrompt={() => setShowPrompt((value) => !value)}
-            onCopy={() => void copyPrompt()}
-            onToken={setToken}
-            onBind={() => void bind()}
-          />
-        ) : null}
-        <AssetList lang={lang} snapshots={store.snapshots} onRefresh={store.snapshots.length ? () => void refresh() : null} />
-        <section className="block">
-          <h2>{t(lang, 'agents')}</h2>
-          {store.agents.length === 0 ? <p className="note">{t(lang, 'noAgents')}</p> : null}
-          {store.agents.map((agent) => (
-            <div className="row" key={agent.id}>
-              <span>{agent.name}</span>
-              <button
-                type="button"
-                className="text-action"
-                onClick={() => {
-                  void unbind(store, agent.token);
-                }}
-              >
-                {t(lang, 'unbind')}
-              </button>
-            </div>
-          ))}
-          {store.agents.length > 0 ? (
-            <BindPanel
-              lang={lang}
-              prompt={store.pair ? buildPairPrompt(store.pair.code) : ''}
-              showPrompt={showPrompt}
-              copied={copied}
-              token={token}
-              error={error}
-              onTogglePrompt={() => setShowPrompt((value) => !value)}
-              onCopy={() => void copyPrompt()}
-              onToken={setToken}
-              onBind={() => void bind()}
-            />
-          ) : null}
-        </section>
-        <section className="block">
-          <h2>{t(lang, 'activity')}</h2>
-          {store.activity.length === 0 ? <p className="note">{t(lang, 'noActivity')}</p> : null}
-          {store.activity.map((item) => (
-            <div className="asset" key={item.id}>
-              <span>
-                {item.method} · {item.chain} · {item.network}
-                <span className="meta"> {item.detail}</span>
-              </span>
-            </div>
-          ))}
-        </section>
-        <button type="button" className="action" onClick={logout}>
-          {t(lang, 'logout')}
-        </button>
-      </div>
-      {settingsOpen ? <Settings store={store} onClose={() => setSettingsOpen(false)} /> : null}
-    </main>
-  );
-}
-
-function BindPanel(props: {
-  lang: Lang;
-  prompt: string;
-  showPrompt: boolean;
-  copied: boolean;
-  token: string;
-  error: string | null;
-  onTogglePrompt: () => void;
-  onCopy: () => void;
-  onToken: (value: string) => void;
-  onBind: () => void;
-}) {
-  return (
-    <section className="block">
-      <h2>{t(props.lang, 'bindTitle')}</h2>
-      <p className="note">{t(props.lang, 'bindIntro')}</p>
-      <button type="button" className="action" onClick={props.onCopy}>
-        {props.copied ? t(props.lang, 'promptCopied') : t(props.lang, 'copyPrompt')}
-      </button>
-      {props.prompt ? (
-        <button type="button" className="text-action" onClick={props.onTogglePrompt}>
-          {props.showPrompt ? t(props.lang, 'hidePrompt') : t(props.lang, 'showPrompt')}
-        </button>
-      ) : null}
-      {props.showPrompt && props.prompt ? <pre className="prompt">{props.prompt}</pre> : null}
-      <label className="field">
-        <span>{t(props.lang, 'tokenLabel')}</span>
-        <input value={props.token} onChange={(event) => props.onToken(event.target.value)} autoComplete="off" spellCheck={false} />
-      </label>
-      <button type="button" className="action" onClick={props.onBind}>
-        {t(props.lang, 'bindAction')}
-      </button>
-      {props.error ? <p className="error">{props.error}</p> : null}
+      ))}
     </section>
   );
 }
 
-function Settings({ store, onClose }: { store: Store; onClose: () => void }) {
+function ActivityPanel({ store }: { store: Store }) {
+  const lang = store.language;
+  return (
+    <section className="panel" aria-labelledby="activity-title">
+      <h2 id="activity-title">{t(lang, 'activity')}</h2>
+      {store.activity.length === 0 ? <p className="note">{t(lang, 'noActivity')}</p> : null}
+      <ul className="activity-list" role="list">
+        {store.activity.map((item) => (
+          <li key={item.id} role="listitem">
+            <span>
+              {t(lang, item.method === 'balance' ? 'methodBalance' : item.method === 'sign' ? 'methodSign' : 'methodSend')}
+              {' · '}
+              {chainName(lang, item.chain)} {clusterLabel(lang, item.chain, item.network)}
+            </span>
+            <p className="note">
+              {item.detail}
+              {item.hash ? ` ${item.hash.slice(0, 10)}…` : ''}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Settings({ store, logout }: { store: Store; logout: () => void }) {
   const lang = store.language;
   const [username, setUsername] = useState(store.username);
   const [single, setSingle] = useState(store.policy.singleTxUsd?.toString() ?? '');
@@ -449,13 +498,16 @@ function Settings({ store, onClose }: { store: Store; onClose: () => void }) {
   const [clientId, setClientId] = useState(store.settings.privyClientId);
   const [bridgeToken, setBridgeToken] = useState(store.settings.bridgeToken);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const saveAccount = () => {
-    if (!/^[\p{L}\p{N}_]{2,24}$/u.test(username)) {
+    if (!isDisplayName(username)) {
       setError(t(lang, 'invalidUsername'));
+      setSaved(false);
       return;
     }
     setError(null);
+    setSaved(true);
     void updateStore((current) => ({
       ...current,
       username,
@@ -464,196 +516,215 @@ function Settings({ store, onClose }: { store: Store; onClose: () => void }) {
   };
 
   return (
-    <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <aside className="drawer">
-        <button type="button" className="text-action" onClick={onClose}>
-          {t(lang, 'settings')}
+    <section className="panel" aria-labelledby="settings-title">
+      <h2 id="settings-title">{t(lang, 'settings')}</h2>
+      <p className="label">{t(lang, 'language')}</p>
+      <div className="choices" role="group" aria-label={t(lang, 'language')}>
+        {(['zh-CN', 'zh-TW', 'en'] as Lang[]).map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-pressed={lang === item}
+            onClick={() => {
+              void updateStore((current) => ({ ...current, language: item }));
+            }}
+          >
+            {item === 'en' ? 'English' : item === 'zh-CN' ? '简体中文' : '繁體中文'}
+          </button>
+        ))}
+      </div>
+      <label className="field" htmlFor="display-name">
+        <span>{t(lang, 'username')}</span>
+        <input
+          id="display-name"
+          value={username}
+          autoComplete="nickname"
+          aria-describedby="display-name-hint"
+          onChange={(event) => setUsername(event.target.value)}
+        />
+      </label>
+      <p className="note" id="display-name-hint">
+        {t(lang, 'usernameHint')}
+      </p>
+      <h2>{t(lang, 'risk')}</h2>
+      <div className="choices">
+        <button
+          type="button"
+          aria-pressed={store.policy.fullAccess}
+          onClick={() => {
+            void updateStore((current) => ({ ...current, policy: { ...current.policy, fullAccess: true } }));
+          }}
+        >
+          {t(lang, 'fullAccess')}
         </button>
-        <p className="label">{t(lang, 'language')}</p>
-        <div className="choices">
-          {(['zh-CN', 'zh-TW', 'en'] as Lang[]).map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={lang === item}
-              onClick={() => {
-                void updateStore((current) => ({ ...current, language: item }));
-              }}
-            >
-              {item === 'en' ? 'English' : item === 'zh-CN' ? '简体中文' : '繁體中文'}
-            </button>
-          ))}
-        </div>
-        <label className="field">
-          <span>{t(lang, 'username')}</span>
-          <input value={username} onChange={(event) => setUsername(event.target.value)} />
-        </label>
-        <p className="note">{t(lang, 'usernameHint')}</p>
-        <section className="block">
-          <h2>{t(lang, 'risk')}</h2>
-          <div className="choices">
-            <button
-              type="button"
-              aria-pressed={store.policy.fullAccess}
-              onClick={() => {
-                void updateStore((current) => ({ ...current, policy: { ...current.policy, fullAccess: true } }));
-              }}
-            >
-              {t(lang, 'fullAccess')}
-            </button>
-            <button
-              type="button"
-              aria-pressed={!store.policy.fullAccess}
-              onClick={() => {
-                void updateStore((current) => ({ ...current, policy: { ...current.policy, fullAccess: false } }));
-              }}
-            >
-              {t(lang, 'useLimits')}
-            </button>
-          </div>
-          <p className="note">{t(lang, 'fullAccessHelp')}</p>
-          {store.policy.fullAccess ? null : (
-            <>
-              <label className="field">
-                <span>{t(lang, 'singleLimit')}</span>
-                <input value={single} inputMode="decimal" onChange={(event) => setSingle(event.target.value)} />
-              </label>
-              <label className="field">
-                <span>{t(lang, 'dailyLimit')}</span>
-                <input value={daily} inputMode="decimal" onChange={(event) => setDaily(event.target.value)} />
-              </label>
-              <button
-                type="button"
-                className="action"
-                onClick={() => {
-                  void updateStore((current) => ({
-                    ...current,
-                    policy: {
-                      ...current.policy,
-                      singleTxUsd: single.trim() ? Number(single) : null,
-                      dailyUsd: daily.trim() ? Number(daily) : null,
-                    },
-                  }));
-                }}
-              >
-                {t(lang, 'save')}
-              </button>
-            </>
-          )}
-          <div className="choices">
-            <button
-              type="button"
-              aria-pressed={store.policy.whitelistEnabled}
-              onClick={() => {
-                void updateStore((current) => ({
-                  ...current,
-                  policy: { ...current.policy, whitelistEnabled: !current.policy.whitelistEnabled },
-                }));
-              }}
-            >
-              {t(lang, 'whitelist')}
-            </button>
-          </div>
-          <p className="note">{t(lang, 'whitelistHelp')}</p>
-          {store.policy.whitelist.length === 0 ? <p className="note">{t(lang, 'whitelistEmpty')}</p> : null}
-          {store.policy.whitelist.map((entry) => (
-            <div className="row" key={entry.address}>
-              <span>
-                {entry.label ? `${entry.label} ` : ''}
-                <span className="addr">{entry.address}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  void updateStore((current) => ({
-                    ...current,
-                    policy: {
-                      ...current.policy,
-                      whitelist: current.policy.whitelist.filter((item) => item.address !== entry.address),
-                    },
-                  }));
-                }}
-              >
-                {t(lang, 'remove')}
-              </button>
-            </div>
-          ))}
-          <label className="field">
-            <span>{t(lang, 'address')}</span>
-            <input value={address} onChange={(event) => setAddress(event.target.value)} spellCheck={false} />
+        <button
+          type="button"
+          aria-pressed={!store.policy.fullAccess}
+          onClick={() => {
+            void updateStore((current) => ({ ...current, policy: { ...current.policy, fullAccess: false } }));
+          }}
+        >
+          {t(lang, 'useLimits')}
+        </button>
+      </div>
+      <p className="note">{t(lang, 'fullAccessHelp')}</p>
+      {store.policy.fullAccess ? null : (
+        <>
+          <label className="field" htmlFor="single-limit">
+            <span>{t(lang, 'singleLimit')}</span>
+            <input id="single-limit" value={single} inputMode="decimal" onChange={(event) => setSingle(event.target.value)} />
           </label>
-          <label className="field">
-            <span>{t(lang, 'label')}</span>
-            <input value={label} onChange={(event) => setLabel(event.target.value)} />
+          <label className="field" htmlFor="daily-limit">
+            <span>{t(lang, 'dailyLimit')}</span>
+            <input id="daily-limit" value={daily} inputMode="decimal" onChange={(event) => setDaily(event.target.value)} />
           </label>
           <button
             type="button"
-            className="action"
+            className="secondary"
             onClick={() => {
-              if (!isAllowlistAddress(address.trim())) {
-                setError(t(lang, 'invalidAddress'));
-                return;
-              }
-              setError(null);
               void updateStore((current) => ({
                 ...current,
                 policy: {
                   ...current.policy,
-                  whitelist: [...current.policy.whitelist, { address: address.trim(), label: label.trim() }],
+                  singleTxUsd: single.trim() ? Number(single) : null,
+                  dailyUsd: daily.trim() ? Number(daily) : null,
                 },
               }));
-              setAddress('');
-              setLabel('');
             }}
           >
-            {t(lang, 'add')}
+            {t(lang, 'save')}
           </button>
+        </>
+      )}
+      <div className="choices">
+        <button
+          type="button"
+          aria-pressed={store.policy.whitelistEnabled}
+          onClick={() => {
+            void updateStore((current) => ({
+              ...current,
+              policy: { ...current.policy, whitelistEnabled: !current.policy.whitelistEnabled },
+            }));
+          }}
+        >
+          {t(lang, 'whitelist')}
+        </button>
+      </div>
+      <p className="note">{t(lang, 'whitelistHelp')}</p>
+      {store.policy.whitelist.length === 0 ? <p className="note">{t(lang, 'whitelistEmpty')}</p> : null}
+      {store.policy.whitelist.map((entry) => (
+        <div className="row" key={entry.address}>
+          <span>
+            {entry.label ? `${entry.label} ` : ''}
+            <span className="addr">{entry.address}</span>
+          </span>
           <button
             type="button"
-            className="action"
+            className="quiet-button"
             onClick={() => {
               void updateStore((current) => ({
                 ...current,
-                policy: { ...current.policy, agentsPaused: !current.policy.agentsPaused },
+                policy: {
+                  ...current.policy,
+                  whitelist: current.policy.whitelist.filter((item) => item.address !== entry.address),
+                },
               }));
             }}
           >
-            {store.policy.agentsPaused ? t(lang, 'resume') : t(lang, 'pause')}
+            {t(lang, 'remove')}
           </button>
-        </section>
-        <section className="block">
-          <h2>{t(lang, 'bridge')}</h2>
-          <p className="note">{store.bridge.connected ? t(lang, 'bridgeConnected') : t(lang, 'bridgeDisconnected')}</p>
-          {store.bridge.error ? <p className="error">{store.bridge.error}</p> : null}
-          <p className="note">{t(lang, 'bridgeHelp')}</p>
-          <label className="field">
-            <span>{t(lang, 'bridgeToken')}</span>
-            <input value={bridgeToken} onChange={(event) => setBridgeToken(event.target.value)} autoComplete="off" spellCheck={false} />
-          </label>
-          <label className="field">
-            <span>{t(lang, 'privyAppId')}</span>
-            <input value={appId} onChange={(event) => setAppId(event.target.value)} autoComplete="off" />
-          </label>
-          <label className="field">
-            <span>{t(lang, 'privyClientId')}</span>
-            <input value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" />
-          </label>
-          <p className="note">{t(lang, 'clientIdHint')}</p>
-          <p className="note">
-            {t(lang, 'extensionId')} {chrome.runtime.id}
-          </p>
-          <p className="note">
-            {t(lang, 'redirectUrl')} https://{chrome.runtime.id}.chromiumapp.org/
-          </p>
-          <button type="button" className="action" onClick={saveAccount}>
-            {t(lang, 'save')}
-          </button>
-          {error ? <p className="error">{error}</p> : null}
-        </section>
-      </aside>
-    </>
+        </div>
+      ))}
+      <label className="field" htmlFor="allow-address">
+        <span>{t(lang, 'address')}</span>
+        <input id="allow-address" value={address} onChange={(event) => setAddress(event.target.value)} spellCheck={false} autoComplete="off" />
+      </label>
+      <label className="field" htmlFor="allow-label">
+        <span>{t(lang, 'label')}</span>
+        <input id="allow-label" value={label} onChange={(event) => setLabel(event.target.value)} />
+      </label>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => {
+          if (!isAllowlistAddress(address.trim())) {
+            setError(t(lang, 'invalidAddress'));
+            return;
+          }
+          setError(null);
+          void updateStore((current) => ({
+            ...current,
+            policy: {
+              ...current.policy,
+              whitelist: [...current.policy.whitelist, { address: address.trim(), label: label.trim() }],
+            },
+          }));
+          setAddress('');
+          setLabel('');
+        }}
+      >
+        {t(lang, 'add')}
+      </button>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => {
+          void updateStore((current) => ({
+            ...current,
+            policy: { ...current.policy, agentsPaused: !current.policy.agentsPaused },
+          }));
+        }}
+      >
+        {store.policy.agentsPaused ? t(lang, 'resume') : t(lang, 'pause')}
+      </button>
+      <h2>{t(lang, 'bridge')}</h2>
+      <p className="note">{store.bridge.connected ? t(lang, 'bridgeConnected') : t(lang, 'bridgeDisconnected')}</p>
+      <p className="note">{t(lang, 'bridgeHelp')}</p>
+      <label className="field" htmlFor="bridge-token">
+        <span>{t(lang, 'bridgeToken')}</span>
+        <input
+          id="bridge-token"
+          type="password"
+          value={bridgeToken}
+          onChange={(event) => setBridgeToken(event.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </label>
+      <label className="field" htmlFor="privy-app">
+        <span>{t(lang, 'privyAppId')}</span>
+        <input id="privy-app" value={appId} onChange={(event) => setAppId(event.target.value)} autoComplete="off" />
+      </label>
+      <label className="field" htmlFor="privy-client">
+        <span>{t(lang, 'privyClientId')}</span>
+        <input id="privy-client" value={clientId} onChange={(event) => setClientId(event.target.value)} autoComplete="off" />
+      </label>
+      <p className="note">{t(lang, 'clientIdHint')}</p>
+      <p className="note">
+        {t(lang, 'extensionId')} {chrome.runtime.id}
+      </p>
+      <p className="note">
+        {t(lang, 'redirectUrl')} https://{chrome.runtime.id}.chromiumapp.org/
+      </p>
+      <button type="button" className="primary" onClick={saveAccount}>
+        {t(lang, 'save')}
+      </button>
+      {saved ? <p className="note">{t(lang, 'savedQuiet')}</p> : null}
+      {error ? (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <button type="button" className="secondary" onClick={logout}>
+        {t(lang, 'logout')}
+      </button>
+    </section>
   );
+}
+
+async function decide(id: string, allow: boolean): Promise<void> {
+  if (!id) return;
+  await updateStore((current) => ({ ...current, approval: { id, allow } }));
 }
 
 async function unbind(store: Store, token: string): Promise<void> {
@@ -666,5 +737,5 @@ async function unbind(store: Store, token: string): Promise<void> {
 }
 
 function icon(): string {
-  return chrome.runtime.getURL('icons/icon-48.png');
+  return chrome.runtime.getURL('icons/icon-32.png');
 }

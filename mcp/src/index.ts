@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { resolveCluster } from '../../shared/chains.ts';
 import type { AgentResult, ChainId } from '../../shared/types.ts';
 import { createBridge, txParams, type Bridge } from './bridge.ts';
 
@@ -59,7 +60,16 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
+function loopback(req: IncomingMessage): boolean {
+  const host = req.headers.host ?? '';
+  return /^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(host);
+}
+
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!loopback(req)) {
+    send(res, 403, { error: 'The bridge accepts loopback clients only.' });
+    return;
+  }
   const url = req.url ?? '/';
   if (req.method === 'GET' && url === '/v1/health') {
     send(res, 200, { ok: true });
@@ -129,7 +139,21 @@ function requireRedeemed(bindToken: string): string | null {
 const chainSchema = z.enum(['solana', 'ethereum', 'base', 'bnb']);
 const networkSchema = z
   .enum(['mainnet', 'testnet', 'devnet'])
-  .describe('Required. Solana uses devnet or mainnet. EVM chains use testnet or mainnet. There is no default.');
+  .optional()
+  .describe('Omit to use mainnet. Pass testnet or devnet only when the user explicitly asked. Solana test traffic is devnet.');
+
+function networkOrError(chain: ChainId, network: string | undefined): string | null {
+  try {
+    resolveCluster(chain, network);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Unsupported network.';
+  }
+}
+
+function chosenNetwork(chain: ChainId, network: string | undefined): 'mainnet' | 'testnet' | 'devnet' {
+  return resolveCluster(chain, network).network;
+}
 
 async function main(): Promise<void> {
   await loadDisk();
@@ -156,7 +180,7 @@ async function main(): Promise<void> {
     'spacexpad_pair',
     {
       description:
-        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user must paste into the extension. There is no default chain or network.',
+        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user must paste into the extension. Later calls use mainnet unless testnet or devnet is explicit.',
       inputSchema: { pairCode: z.string(), agentName: z.string() },
     },
     async ({ pairCode, agentName }) => {
@@ -190,16 +214,18 @@ async function main(): Promise<void> {
     'spacexpad_get_balance',
     {
       description:
-        'Read the native balance and other fungible tokens for one chain and one cluster. chain and network are required. There is no wallet default. Solana network must be mainnet or devnet. Ethereum, Base, and BNB Chain use mainnet or testnet.',
+        'Read the native balance and other fungible tokens. chain is required. network defaults to mainnet. Pass testnet or devnet only when the user explicitly asked. Solana test traffic is devnet, not testnet.',
       inputSchema: { bindToken: z.string(), chain: chainSchema, network: networkSchema },
     },
     async ({ bindToken, chain, network }) => {
       const denied = requireRedeemed(bindToken);
       if (denied) return toolText(denied, true);
+      const invalid = networkOrError(chain, network);
+      if (invalid) return toolText(invalid, true);
       const result = await bridge.request({
         id: randomBytes(8).toString('hex'),
         method: 'get_balance',
-        params: { bindToken, chain: chain as ChainId, network },
+        params: { bindToken, chain: chain as ChainId, network: chosenNetwork(chain, network) },
       });
       return toolText(result.ok ? result.result : result.error, !result.ok);
     },
@@ -217,7 +243,7 @@ async function main(): Promise<void> {
     'spacexpad_sign_transaction',
     {
       description:
-        'Ask the wallet to sign a transaction and return the signed bytes. Does not broadcast. chain and network are required. The extension enforces the risk policy and kill switch. Do not claim success without a signedTransaction in the result.',
+        'Ask the wallet to sign a transaction and return the signed bytes. Does not broadcast. chain is required. network defaults to mainnet. An explicit testnet or devnet waits for confirmation in the extension. The extension enforces the risk policy and kill switch. Do not claim success without a signedTransaction in the result.',
       inputSchema: txShape,
     },
     async (args) => answerTx('sign', args),
@@ -226,7 +252,7 @@ async function main(): Promise<void> {
     'spacexpad_send_transaction',
     {
       description:
-        'Ask the wallet to sign and submit a transaction. chain and network are required. Returns a hash only if the RPC accepted it. The extension enforces the risk policy and kill switch. Never invent a transaction hash.',
+        'Ask the wallet to sign and submit a transaction. chain is required. network defaults to mainnet. An explicit testnet or devnet waits for confirmation in the extension. Returns a hash only if the RPC accepted it. The extension enforces the risk policy and kill switch. Never invent a transaction hash.',
       inputSchema: txShape,
     },
     async (args) => answerTx('send', args),
@@ -237,11 +263,13 @@ async function main(): Promise<void> {
 
 async function answerTx(
   method: 'sign' | 'send',
-  args: { bindToken: string; chain: ChainId; network: 'mainnet' | 'testnet' | 'devnet'; kind: 'native_transfer' | 'serialized'; to?: string; amount?: string; serialized?: string },
+  args: { bindToken: string; chain: ChainId; network?: 'mainnet' | 'testnet' | 'devnet'; kind: 'native_transfer' | 'serialized'; to?: string; amount?: string; serialized?: string },
 ) {
   const denied = requireRedeemed(args.bindToken);
   if (denied) return toolText(denied, true);
-  const result = await bridge.request(txParams(method, args));
+  const invalid = networkOrError(args.chain, args.network);
+  if (invalid) return toolText(invalid, true);
+  const result = await bridge.request(txParams(method, { ...args, network: chosenNetwork(args.chain, args.network) }));
   return toolText(result.ok ? result.result : result.error, !result.ok);
 }
 
