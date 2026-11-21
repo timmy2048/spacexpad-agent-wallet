@@ -118,16 +118,15 @@ input, textarea { caret-color: var(--accent); }
 .at { color: var(--muted); }
 
 .popover {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% - 2px);
-  left: 0;
-  width: min(100%, 360px);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 6px 0 10px;
   padding: 4px 0 2px;
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
   animation: rise var(--motion) var(--ease);
 }
 

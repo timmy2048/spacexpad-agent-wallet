@@ -72,7 +72,7 @@ Data-use answers for the form:
 
 ## Assets checklist
 
-- [x] `icons/icon-16.png`, `icons/icon-32.png`, `icons/icon-48.png`, `icons/icon-128.png`. Generator: `scripts/gen-icons.mjs`, source `assets/spacexpad-x-avatar.png` (the SpaceXpad X avatar). It does not redraw `assets/rocket.svg`. Until that PNG is in the repo, the script leaves the existing icons and only fills a missing 32px size from `icon-128.png`.
+- [x] `icons/icon-16.png`, `icons/icon-32.png`, `icons/icon-48.png`, `icons/icon-128.png` from `assets/spacexpad-x-avatar.png` via `scripts/gen-icons.mjs`. The script fails if that file is missing. It does not read a rocket SVG.
 - [ ] 1280×800 screenshot of the sign-in screen
 - [ ] 1280×800 screenshot of the console with the address popover open
 - [ ] 1280×800 screenshot of Settings (language, limits, kill switch)

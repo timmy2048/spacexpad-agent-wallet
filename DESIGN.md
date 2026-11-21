@@ -50,7 +50,7 @@ Radix Slate roles, not a component library: background Slate 1 `#111113`, raised
 
 No glow, no grid, no gradient text, no nested cards, no invented USD total, no invented activity. The address disclosure opens on hover, focus, and click because `interestfor` / `popover="hint"` is still limited and a polyfill would be extra extension code. Copy buttons are in tab order. Escape returns focus to the account button.
 
-The toolbar icon is the SpaceXpad X avatar when `assets/spacexpad-x-avatar.png` is present. `scripts/gen-icons.mjs` fits that file to 16, 32, 48, and 128. It does not read `assets/rocket.svg`. Until the avatar file is in the repo, the script leaves the existing icons and only fills a missing 32px size from `icon-128.png`.
+The toolbar icon is the SpaceXpad X avatar at `assets/spacexpad-x-avatar.png`, a 1024×1024 PNG upscaled from the 192px frontend mark. `scripts/gen-icons.mjs` fits that file to 16, 32, 48, and 128 and stops if the file is missing. It does not draw a replacement and it does not read a rocket SVG.
 
 ## Site
 
