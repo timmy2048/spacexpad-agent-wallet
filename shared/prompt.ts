@@ -8,14 +8,14 @@ export function createPairCode(): string {
 }
 
 export const SPACEXPAD_SITE = 'https://spacexpad.xyz/';
-export const SPACEXPAD_WALLET_DOCS = 'https://spacexpad.xyz/agent-wallet/';
+export const SPACEXPAD_WALLET_DOCS = 'https://spacexpad.xyz/agent-wallet/skill.md';
 
 export function buildPairPrompt(pairCode: string): string {
   return [
     'Connect to the SpaceXpad agent wallet through its local MCP server.',
     `SpaceXpad's site is ${SPACEXPAD_SITE}`,
-    `Reserved setup path for this extension only: ${SPACEXPAD_WALLET_DOCS}`,
-    'That path is not published. Do not use /, /skill, /skill.md, /agents, /prompt, or /docs. Those belong to the launchpad.',
+    `Reserved setup document for this extension only: ${SPACEXPAD_WALLET_DOCS}`,
+    'That URL is not published. It is separate from /skill and /skill.md. Do not use /, /skill, /skill.md, or /agents. Those belong to the launchpad.',
     'There is no hosted wallet endpoint. Do not invent a tool name or put this PAIR_CODE in a public URL.',
     '',
     `PAIR_CODE: ${pairCode}`,

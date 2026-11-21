@@ -5,7 +5,7 @@ description: Use the SpaceXpad agent wallet through its local MCP server. Pair w
 
 # SpaceXpad agent wallet
 
-The wallet is a Chrome extension for the launchpad at [https://spacexpad.xyz/](https://spacexpad.xyz/). Privy holds the keys. This skill talks to the local MCP server `spacexpad-agent-wallet`, which forwards each call to the extension over `http://127.0.0.1:47321`. The reserved public page is `https://spacexpad.xyz/agent-wallet/` and it is not published. Do not use the launchpad's `/skill`, `/skill.md`, or `/agents` pages for this extension. There is no hosted wallet endpoint.
+The wallet is a Chrome extension for the launchpad at [https://spacexpad.xyz/](https://spacexpad.xyz/). Privy holds the keys. This skill talks to the local MCP server `spacexpad-agent-wallet`, which forwards each call to the extension over `http://127.0.0.1:47321`. The reserved public document is `https://spacexpad.xyz/agent-wallet/skill.md` and it is not published. Do not use the launchpad's `/skill`, `/skill.md`, or `/agents` pages for this extension. There is no hosted wallet endpoint.
 
 The extension enforces the user's risk policy and kill switch. A testnet or devnet signature or send also waits for a confirmation in the extension popup. Nothing is signed until that confirmation. Mainnet does not ask that extra question.
 

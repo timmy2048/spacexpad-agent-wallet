@@ -14,7 +14,7 @@ Draft for a later submission. Do not upload this build until the listing, privac
 
 **Description:**
 
-SpaceXpad agent wallet is a keyless vault for Solana, Ethereum, Base, and BNB Chain, for the launchpad at https://spacexpad.xyz/. Setup for this extension is reserved at https://spacexpad.xyz/agent-wallet/ and that page is not published. The live launchpad paths (`/`, `/skill`, `/agents`) are separate. You sign in with Gmail or an email code. Privy creates the wallets and signs. You never see a seed phrase.
+SpaceXpad agent wallet is a keyless vault for Solana, Ethereum, Base, and BNB Chain, for the launchpad at https://spacexpad.xyz/. Setup for this extension is reserved at https://spacexpad.xyz/agent-wallet/skill.md and that file is not published. The live launchpad paths (`/`, `/skill`, `/skill.md`, `/agents`) are separate. You sign in with Gmail or an email code. Privy creates the wallets and signs. You never see a seed phrase.
 
 A paired agent on your computer can read balances, request a signature, or submit a transaction through a local MCP server on 127.0.0.1. The wallet shows mainnet balances. Agent calls use mainnet unless the request explicitly names a testnet or devnet. A test network signature waits for confirmation in the extension.
 

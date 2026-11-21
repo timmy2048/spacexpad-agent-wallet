@@ -54,4 +54,4 @@ The toolbar icon is the SpaceXpad X avatar at `assets/spacexpad-x-avatar.png`, a
 
 ## Site
 
-The launchpad is [https://spacexpad.xyz/](https://spacexpad.xyz/). Its live prompts and docs stay on `/`, `/skill`, `/skill.md`, and `/agents`. This extension reserves the unused prefix [https://spacexpad.xyz/agent-wallet/](https://spacexpad.xyz/agent-wallet/), which returned 404 on 21 November 2026 and was not deployed. Pair codes and bridge tokens are not written into that URL or into pages that would be indexed.
+The launchpad is [https://spacexpad.xyz/](https://spacexpad.xyz/). Its live prompts and docs stay on `/`, `/skill`, `/skill.md`, and `/agents`. This extension reserves [https://spacexpad.xyz/agent-wallet/skill.md](https://spacexpad.xyz/agent-wallet/skill.md), which returned 404 on 21 November 2026 and was not deployed. That file is separate from `/skill` and `/skill.md`. Pair codes and bridge tokens are not written into that URL or into pages that would be indexed.

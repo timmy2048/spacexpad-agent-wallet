@@ -165,8 +165,8 @@ describe('prompt and copy', () => {
     assert.match(prompt, /node --experimental-strip-types mcp\/src\/index.ts/);
     assert.match(prompt, /127\.0\.0\.1:47321/);
     assert.match(prompt, /omit network to use mainnet/i);
-    assert.match(prompt, /https:\/\/spacexpad\.xyz\/agent-wallet\//);
-    assert.match(prompt, /\/skill/);
+    assert.match(prompt, /https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md/);
+    assert.doesNotMatch(prompt, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
     assert.match(prompt, /not published/);
     assert.match(prompt, /no hosted wallet endpoint/i);
     assert.doesNotMatch(prompt, /https?:\/\/(?!(127\.0\.0\.1|spacexpad\.xyz))/);

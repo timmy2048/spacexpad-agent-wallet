@@ -9,9 +9,10 @@ The launchpad is [https://spacexpad.xyz/](https://spacexpad.xyz/). Checked on 21
 | `/agents` | 200, “How agents participate” | launchpad |
 | `/prompt`, `/prompts`, `/docs`, `/faq` | 404, still not used for this wallet | leave empty |
 | `/wallet`, `/wallet/` | 404 | left unused; the homepage already says “agent wallet” |
-| `/agent-wallet`, `/agent-wallet/` | 404 | reserved for this extension |
+| `/agent-wallet`, `/agent-wallet/` | 404 | not the document |
+| `/agent-wallet/skill.md` | 404 | reserved document for this extension |
 
-The reserved public prefix is `https://spacexpad.xyz/agent-wallet/`. It is not published. Do not write this extension's setup onto `/`, `/skill`, `/skill.md`, `/agents`, `/prompt`, or `/docs`. Publishing that new prefix is a later site change, not part of this repo. Until it exists, the runnable server is the local process below. Do not put a pair code or bridge token in the public URL.
+The reserved public document is `https://spacexpad.xyz/agent-wallet/skill.md`. It is not published, and it is not `/skill` or `/skill.md`. Do not write this extension's setup onto `/`, `/skill`, `/skill.md`, `/agents`, `/prompt`, or `/docs`. Publishing that new file is a later site change, not part of this repo. Until it exists, the runnable server is the local process below. Do not put a pair code or bridge token in the public URL.
 
 The agent bridge is a process you run on the same computer as Chrome. It is not a hosted service. Do not point a client at a public URL. Do not put the bridge token or a pair code in a public page. The pair code is only inside the prompt the extension copies after the user asks for it.
 
