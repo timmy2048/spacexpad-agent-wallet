@@ -29,6 +29,8 @@ export function defaultStore(): Store {
     spend: { date: '', microUsd: '0' },
     snapshots: [],
     pair: null,
+    pendingApproval: null,
+    approval: null,
     settings: defaultSettings(),
     bridge: { connected: false, error: null, at: null },
     vaultError: null,
@@ -54,9 +56,23 @@ export function normalizeStore(value: unknown): Store {
       ...settings,
       rpc: { ...DEFAULT_RPCS, ...settings.rpc },
     },
+    pendingApproval: pendingShape(raw.pendingApproval) ? raw.pendingApproval : null,
+    approval: approvalShape(raw.approval) ? raw.approval : null,
     bridge: { ...base.bridge, ...raw.bridge },
     vaultError: raw.vaultError ?? null,
   };
+}
+
+function pendingShape(value: Store['pendingApproval'] | undefined): value is NonNullable<Store['pendingApproval']> {
+  return Boolean(value && typeof value.id === 'string' && (value.method === 'sign' || value.method === 'send'));
+}
+
+function approvalShape(value: Store['approval'] | undefined): value is NonNullable<Store['approval']> {
+  return Boolean(value && typeof value.id === 'string' && typeof value.allow === 'boolean');
+}
+
+export function isDisplayName(value: string): boolean {
+  return /^[\p{L}\p{N}_]{2,24}$/u.test(value);
 }
 
 export function hasAppId(settings: Settings): boolean {

@@ -1,8 +1,12 @@
 # SpaceXpad agent wallet
 
+The launchpad is [https://spacexpad.xyz/](https://spacexpad.xyz/). On 21 November 2026 these paths were already live and belong to that site: `/` (launch prompts), `/skill` and `/skill.md` (the Solana fair-mint skill), and `/agents` (how agents participate). This extension does not use them.
+
+The reserved setup document is [https://spacexpad.xyz/agent-wallet/skill.md](https://spacexpad.xyz/agent-wallet/skill.md). On 21 November 2026 that URL returned 404. It is not `/skill` or `/skill.md`. The review copy is `docs/agent-wallet/skill.md`. Nothing was deployed. Pair codes and bridge tokens stay out of that URL. They appear only after someone copies a prompt or starts the local server.
+
 Chrome extension for a keyless multi-chain vault. Privy creates the wallets and signs. A paired agent, through a local MCP server, can read balances, request a signature, or submit a transaction. The extension enforces the risk policy and the kill switch.
 
-There is no wallet-level network and no default cluster. Solana, Ethereum, Base, and BNB Chain are all supported on mainnet and on testnet/devnet, and every agent call names both the chain and the cluster.
+Solana, Ethereum, Base, and BNB Chain are supported. The wallet view and agent actions use mainnet unless the user, or the agent prompt, explicitly asks for testnet or devnet. Omitting `network` means mainnet. The server does not rewrite an explicit test network into mainnet, and it does not treat a missing network as a test network. An explicit testnet or devnet signature or send waits for confirmation in the popup. Nothing is signed if that confirmation does not arrive.
 
 ## Load the unpacked extension
 
@@ -40,21 +44,22 @@ Still required in the Privy dashboard for this unpacked build:
 
 The unpacked extension ID comes from the public key in `manifest.json`. A later Chrome Web Store publish replaces it, and the origin and redirect above have to be updated to match.
 
-Privy's embedded-wallet client still has to attach to some EVM chain when it loads. That attachment is not a product setting. The popup has no network control. Before a signature, the extension switches to the chain the agent named and broadcasts through the RPC for that cluster.
+Privy's embedded-wallet client still has to attach to some EVM chain when it loads. That attachment is not a product setting. The popup shows mainnet balances. Before a signature, the extension switches to the chain and cluster for that request and broadcasts through the RPC for that cluster. An omitted cluster is mainnet.
 
 ## Using the wallet
 
-Sign in with Gmail or an email code. The username is edited in Settings after login.
+Sign in with Gmail or an email code. The username is a display name edited in Settings after login. It is stored only in this browser profile. The format check is 2–24 letters, numbers, or underscores. There is no account server and no global uniqueness check, so the same display name can exist on another device. Sign-in and wallet identity use the Privy user id (`auth.userId`) and the Solana plus EVM addresses, not the display name.
 
-Hover the `@username` row to copy addresses. The list is Solana, Ethereum, Base, and BNB Chain. The three EVM rows are the same `0x` address.
+Hover or focus the `@username` row to copy addresses. The list is Solana, Ethereum, Base, and BNB Chain. The three EVM rows are the same `0x` address. Keyboard users can open the list from the button, tab to a copy control, and leave with Escape.
 
-Assets are grouped under those four chains. Until an agent requests a cluster, each chain shows its native asset at 0 with the note that it has not been read. That 0 is not an on-chain result. After `spacexpad_get_balance` (or a send) names a chain and a cluster, the extension reads that cluster and lists the native balance, including a real 0, plus other fungible tokens it can see. NFTs are not listed. A failed token index is shown as an error; it is not reported as an empty wallet. Solana token symbols that cannot be resolved are shown as a shortened mint.
+The asset list reads mainnet for all four chains after the wallets exist. A shown zero is a completed read. A failed RPC stays an error and is not displayed as zero. Other fungible tokens are listed under the chain that held them. Solana uses `getTokenAccountsByOwner` and shows a shortened mint when no symbol is available. Ethereum, Base, and BNB Chain use Blockscout's token-balance API. NFTs are not listed. If the token index fails, the native balance still shows and the index error is separate. An agent can still read an explicit testnet or devnet; that result is labeled and is not the default view.
 
-Bind an agent from the console when none are bound:
+Bind an agent from the Agent tab:
 
-1. Copy the prompt. It contains `PAIR_CODE` and the permissions.
-2. Give it to the agent. The agent calls `spacexpad_pair` and shows an `spx_bind_...` token.
-3. Paste that token into the extension.
+1. Start the local MCP server (see below) and paste its bridge token into Settings.
+2. Copy the prompt. It contains `PAIR_CODE`, the real tool names, and the local command. It expires in 10 minutes.
+3. Give it to the agent. The agent calls `spacexpad_pair` and shows an `spx_bind_...` token.
+4. Paste that token into the extension. Remove the agent later to revoke it.
 
 Settings cover language (简体中文, 繁體中文, English), username, and the risk policy. Full access is the default: no USD cap. You can switch on a single-transaction USD limit and a daily USD limit. An optional whitelist allows signing only when each destination is on the list (the recipient for a native transfer, the contract for a call, the mint for an SPL transfer). The kill switch pauses signing and sending for every agent. Balance reads still work. Resume is on the paused line and in Settings.
 
@@ -62,31 +67,33 @@ If a price is missing while a limit is on, the extension refuses the signature. 
 
 ## MCP and skill
 
-Start the bridge from this repo:
+There is no hosted MCP URL. Setup is in `MCP.md`. From this repo:
 
 ```bash
-npm run mcp
+npm install
+npm run build
+node --experimental-strip-types mcp/src/index.ts
 ```
 
-It listens on `127.0.0.1:47321` and prints a bridge token. Paste that token into Settings. The token is also written to `~/.spacexpad-agent-wallet/bridge.json`. Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`. The process uses stdout for MCP, so the token is printed on stderr.
+`npm run mcp` is the same process. It listens on `127.0.0.1:47321`, requires a bearer token on every route except `GET /v1/health`, and rejects a non-loopback `Host`. The token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. Paste it into Settings. Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`.
 
-Claude Desktop or Cursor MCP config:
+Cursor or Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "spacexpad-agent-wallet": {
-      "command": "npm",
-      "args": ["run", "mcp"],
+      "command": "node",
+      "args": ["--experimental-strip-types", "mcp/src/index.ts"],
       "cwd": "/absolute/path/to/this/repo"
     }
   }
 }
 ```
 
-The skill the agent should follow is `skill/spacexpad-agent-wallet/SKILL.md`.
+The registered tools are `spacexpad_pair`, `spacexpad_get_addresses`, `spacexpad_get_balance`, `spacexpad_sign_transaction`, and `spacexpad_send_transaction`. The skill is `skill/spacexpad-agent-wallet/SKILL.md`.
 
-Chain strings are `solana`, `ethereum`, `base`, and `bnb`. Network strings are `mainnet`, `testnet`, and `devnet`. Solana does not accept `testnet` (use `devnet`). EVM chains do not accept `devnet` (Ethereum and Base testnet is Sepolia; BNB Chain testnet is BSC testnet). If the user did not name both, the agent should ask.
+Chain strings are `solana`, `ethereum`, `base`, and `bnb`. Omit `network` for mainnet. Solana does not accept `testnet` (use `devnet` only when the user asked for it). EVM chains do not accept `devnet` (Ethereum and Base testnet is Sepolia; BNB Chain testnet is BSC testnet). Explicit testnet or devnet signing waits for a popup confirmation.
 
 Browser auto-handshake is not in this version. Pairing is the copy-prompt / paste-token flow.
 
@@ -98,7 +105,9 @@ npm run check
 npm run build
 ```
 
-`npm test` covers cluster selection, asset grouping, the risk policy, pairing, and transaction destination parsing. `npm run check` rejects `.then(`, `eval(`, and inline `onclick` in our sources.
+`npm test` covers mainnet as the omitted cluster, explicit testnet confirmation, asset grouping, the risk policy, pairing, and an MCP client that discovers the real tools. `npm run check` rejects `.then(`, `eval(`, and inline `onclick` in our sources.
+
+Icons are generated by `npm run icons` from `assets/spacexpad-x-avatar.png`. If that file is missing, the script stops. It does not fall back to another drawing. The manifest key is unchanged, so the unpacked extension id stays `kgjgdglopjkfahcipgkpnnkenjnoineo`.
 
 RPC URLs live in `config.example.json` and can be overridden in `config.json`. Public RPCs are rate limited. A failed read is shown as an error.
 

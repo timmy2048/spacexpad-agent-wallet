@@ -94,6 +94,20 @@ export type Settings = {
   configError: string | null;
 };
 
+export type PendingApproval = {
+  id: string;
+  method: 'sign' | 'send';
+  chain: ChainId;
+  network: NetworkId;
+  agentName: string;
+  expiresAt: number;
+};
+
+export type ApprovalDecision = {
+  id: string;
+  allow: boolean;
+};
+
 export type Store = {
   version: 1;
   language: Lang;
@@ -106,6 +120,8 @@ export type Store = {
   spend: { date: string; microUsd: string };
   snapshots: Snapshot[];
   pair: { code: string; expiresAt: number } | null;
+  pendingApproval: PendingApproval | null;
+  approval: ApprovalDecision | null;
   settings: Settings;
   bridge: { connected: boolean; error: string | null; at: number | null };
   vaultError: string | null;
@@ -116,7 +132,7 @@ export type TxKind = 'native_transfer' | 'serialized';
 export type TxParams = {
   bindToken: string;
   chain: ChainId;
-  network: string;
+  network?: string;
   kind: TxKind;
   to?: string;
   amount?: string;
@@ -125,7 +141,7 @@ export type TxParams = {
 
 export type Inbound =
   | { id: string; method: 'get_addresses'; params: { bindToken: string } }
-  | { id: string; method: 'get_balance'; params: { bindToken: string; chain: ChainId; network: string } }
+  | { id: string; method: 'get_balance'; params: { bindToken: string; chain: ChainId; network?: string } }
   | { id: string; method: 'sign' | 'send'; params: TxParams };
 
 export type AgentResult = { ok: true; result: unknown } | { ok: false; error: string; code?: DenialCode };

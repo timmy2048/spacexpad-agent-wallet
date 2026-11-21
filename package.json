@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "spacexpad-agent-wallet": "./mcp/bin/spacexpad-agent-wallet.mjs"
+  },
   "scripts": {
     "icons": "node scripts/gen-icons.mjs",
     "test": "node --experimental-strip-types --test \"shared/**/*.test.ts\" \"src/**/*.test.ts\" \"mcp/**/*.test.ts\"",
     "prebuild": "node scripts/gen-icons.mjs",
     "build": "tsc --noEmit && vite build && node scripts/copy-config.mjs",
     "mcp": "node --experimental-strip-types mcp/src/index.ts",
+    "mcp:help": "node mcp/bin/spacexpad-agent-wallet.mjs --help",
     "check": "node scripts/check-constraints.mjs"
   },
   "dependencies": {

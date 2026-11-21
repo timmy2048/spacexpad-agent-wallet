@@ -2,9 +2,9 @@ import { resolveCluster } from '../../shared/chains.ts';
 import { policyText } from '../../shared/i18n.ts';
 import { utcDate } from '../../shared/money.ts';
 import { evaluatePolicy } from '../../shared/policy.ts';
-import type { Activity, AgentResult, Inbound, Snapshot, Store, TxParams } from '../../shared/types.ts';
+import type { Activity, AgentResult, Inbound, PendingApproval, Snapshot, Store, TxParams } from '../../shared/types.ts';
 import { readClusterBalance } from './balances.ts';
-import { quoteTransaction } from './quote.ts';
+import { quoteTransaction, type Quote } from './quote.ts';
 
 export type SignOutcome = { hash?: string; signedTransaction?: string };
 
@@ -13,6 +13,9 @@ export type HandlerDeps = {
   update: (patch: (store: Store) => Store) => Promise<Store>;
   sign: (params: TxParams, rpcUrl: string, method: 'sign' | 'send') => Promise<SignOutcome>;
   confirm: (id: string) => Promise<boolean>;
+  approveNonMainnet?: (pending: PendingApproval) => Promise<boolean>;
+  readBalance?: typeof readClusterBalance;
+  quote?: (params: TxParams, rpcUrl: string) => Promise<Quote>;
   now: () => number;
 };
 
@@ -29,9 +32,9 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
     if (!rpcUrl) return { ok: false, error: `No RPC is configured for ${cluster.rpcKey}.` };
 
     if (inbound.method === 'get_balance') {
-      const snapshot = await readClusterBalance({
-        chain: inbound.params.chain,
-        network: inbound.params.network,
+      const snapshot = await (deps.readBalance ?? readClusterBalance)({
+        chain: cluster.chain,
+        network: cluster.network,
         solanaAddress: store.addresses?.solana ?? null,
         evmAddress: store.addresses?.evm ?? null,
         rpcUrl,
@@ -69,7 +72,59 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
       };
     }
 
-    const quote = await quoteTransaction(inbound.params, rpcUrl);
+    if (store.policy.agentsPaused) {
+      const detail = policyText('en', { code: 'paused' });
+      await deps.update((current) =>
+        withActivity(current, {
+          at: deps.now(),
+          agentName: agent.name,
+          method: inbound.method,
+          chain: cluster.chain,
+          network: cluster.network,
+          status: 'blocked',
+          detail,
+        }),
+      );
+      return { ok: false, error: detail, code: 'paused' };
+    }
+
+    if (cluster.network !== 'mainnet') {
+      const pending: PendingApproval = {
+        id: inbound.id,
+        method: inbound.method,
+        chain: cluster.chain,
+        network: cluster.network,
+        agentName: agent.name,
+        expiresAt: deps.now() + 60_000,
+      };
+      const allowed = deps.approveNonMainnet ? await deps.approveNonMainnet(pending) : false;
+      if (!allowed) {
+        const detail = 'This test network was not confirmed. Nothing was signed.';
+        await deps.update((current) =>
+          withActivity(current, {
+            at: deps.now(),
+            agentName: agent.name,
+            method: inbound.method,
+            chain: cluster.chain,
+            network: cluster.network,
+            status: 'blocked',
+            detail,
+          }),
+        );
+        return { ok: false, error: detail };
+      }
+    }
+
+    const params: TxParams = {
+      bindToken: inbound.params.bindToken,
+      chain: cluster.chain,
+      network: cluster.network,
+      kind: inbound.params.kind,
+      to: inbound.params.to,
+      amount: inbound.params.amount,
+      serialized: inbound.params.serialized,
+    };
+    const quote = await (deps.quote ?? quoteTransaction)(params, rpcUrl);
     const decision = evaluatePolicy({
       policy: store.policy,
       spent: store.spend,
@@ -98,7 +153,7 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
 
     let outcome: SignOutcome;
     try {
-      outcome = await deps.sign(inbound.params, rpcUrl, inbound.method);
+      outcome = await deps.sign(params, rpcUrl, inbound.method);
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Signing failed.';
       await deps.update((current) =>
@@ -150,7 +205,7 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
       });
     });
 
-    void refreshQuietly(deps, inbound.params, rpcUrl);
+    void refreshQuietly(deps, params, rpcUrl);
 
     return {
       ok: true,
@@ -197,9 +252,10 @@ async function refreshQuietly(deps: HandlerDeps, params: TxParams, rpcUrl: strin
 
 async function refreshAfter(deps: HandlerDeps, params: TxParams, rpcUrl: string): Promise<void> {
   const store = await deps.load();
-  const snapshot = await readClusterBalance({
+  const network = params.network ?? 'mainnet';
+  const snapshot = await (deps.readBalance ?? readClusterBalance)({
     chain: params.chain,
-    network: params.network,
+    network,
     solanaAddress: store.addresses?.solana ?? null,
     evmAddress: store.addresses?.evm ?? null,
     rpcUrl,

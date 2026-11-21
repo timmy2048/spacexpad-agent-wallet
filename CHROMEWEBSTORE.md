@@ -14,9 +14,9 @@ Draft for a later submission. Do not upload this build until the listing, privac
 
 **Description:**
 
-SpaceXpad agent wallet is a keyless vault for Solana, Ethereum, Base, and BNB Chain. You sign in with Gmail or an email code. Privy creates the wallets and signs. You never see a seed phrase.
+SpaceXpad agent wallet is a keyless vault for Solana, Ethereum, Base, and BNB Chain, for the launchpad at https://spacexpad.xyz/. Setup for this extension is reserved at https://spacexpad.xyz/agent-wallet/skill.md and that file is not published. The live launchpad paths (`/`, `/skill`, `/skill.md`, `/agents`) are separate. You sign in with Gmail or an email code. Privy creates the wallets and signs. You never see a seed phrase.
 
-A paired agent on your computer can read balances, request a signature, or submit a transaction through a local MCP server. You choose the chain and the cluster in the request. The wallet does not pick a default network.
+A paired agent on your computer can read balances, request a signature, or submit a transaction through a local MCP server on 127.0.0.1. The wallet shows mainnet balances. Agent calls use mainnet unless the request explicitly names a testnet or devnet. A test network signature waits for confirmation in the extension.
 
 You can leave signing uncapped, or set a single-transaction USD limit and a daily USD limit. An optional whitelist restricts destinations. A kill switch pauses every agent. The extension refuses a signature it cannot price when a limit is on, and it never reports a transaction hash it did not receive.
 
@@ -40,7 +40,7 @@ Give the signed-in user a Privy embedded wallet and a local bridge so a paired a
 | Host | Why |
 | --- | --- |
 | `https://auth.privy.io/*`, `https://api.privy.io/*`, `https://*.privy.io/*`, `https://*.rpc.privy.systems/*` | Privy login and embedded-wallet signing. |
-| PublicNode and public Solana RPC hosts | Balance reads and transaction broadcast for the cluster an agent named. |
+| PublicNode and public Solana RPC hosts | Mainnet balance reads by default, plus a testnet or devnet read or broadcast only when that cluster was explicitly requested. |
 | Blockscout hosts for Ethereum, Base, and BNB Chain, including Sepolia, Base Sepolia, and BSC testnet | Fungible token lists. |
 | `https://coins.llama.fi/*` | USD prices for display and for limit checks. |
 | `http://127.0.0.1:47321/*` | Local MCP bridge. It is not a remote server. |
@@ -72,7 +72,7 @@ Data-use answers for the form:
 
 ## Assets checklist
 
-- [x] `icons/icon-16.png`, `icons/icon-48.png`, `icons/icon-128.png` generated from `assets/rocket.svg`
+- [x] `icons/icon-16.png`, `icons/icon-32.png`, `icons/icon-48.png`, `icons/icon-128.png` from `assets/spacexpad-x-avatar.png` via `scripts/gen-icons.mjs`. The script fails if that file is missing. It does not read a rocket SVG.
 - [ ] 1280×800 screenshot of the sign-in screen
 - [ ] 1280×800 screenshot of the console with the address popover open
 - [ ] 1280×800 screenshot of Settings (language, limits, kill switch)

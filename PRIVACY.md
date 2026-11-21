@@ -20,7 +20,7 @@ The extension stores the following in `chrome.storage.local` on your computer:
 - Bound agent names and binding tokens
 - Wallet addresses after login
 - Recent agent activity and, when a USD limit applies, how much has been sent today
-- Cached balances for clusters an agent has actually requested
+- Cached balances. The popup reads mainnet after login. A testnet or devnet snapshot is stored only after an explicit request.
 
 That data stays in the browser profile unless you remove the extension or clear extension storage.
 

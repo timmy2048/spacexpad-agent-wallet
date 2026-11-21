@@ -43,6 +43,17 @@ function BnbMark() {
   );
 }
 
+export function NavIcon({ name }: { name: 'wallet' | 'agent' | 'activity' | 'settings' }) {
+  return (
+    <svg className="nav-icon" viewBox="0 0 16 16" aria-hidden="true">
+      {name === 'wallet' ? <rect x="2" y="3.5" width="12" height="9" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.2" /> : null}
+      {name === 'agent' ? <path d="M3 12.5 V6.5 L8 3.5 L13 6.5 V12.5" fill="none" stroke="currentColor" strokeWidth="1.2" /> : null}
+      {name === 'activity' ? <path d="M2 11 L5.5 7.5 L8 10 L13.5 4" fill="none" stroke="currentColor" strokeWidth="1.2" /> : null}
+      {name === 'settings' ? <circle cx="8" cy="8" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.2" /> : null}
+    </svg>
+  );
+}
+
 export function CopyIcon() {
   return (
     <svg className="copy-icon" viewBox="0 0 16 16" aria-hidden="true">

@@ -2,7 +2,7 @@ import '../buffer-polyfill.ts';
 import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { hasAppId } from '../../shared/store.ts';
-import type { Inbound } from '../../shared/types.ts';
+import type { Inbound, PendingApproval } from '../../shared/types.ts';
 import { handleAgentRequest } from '../lib/handleRequest.ts';
 import { bridgePost, loadStore, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
@@ -61,6 +61,7 @@ function BridgeLoop() {
                 const answer = await bridgePost(latest.settings, '/v1/confirm', { id });
                 return answer.proceed === true;
               },
+              approveNonMainnet: (pending) => approveTestnet(pending),
               now: () => Date.now(),
             },
             request,
@@ -84,6 +85,28 @@ function BridgeLoop() {
     };
   }, []);
   return null;
+}
+
+async function approveTestnet(pending: PendingApproval): Promise<boolean> {
+  const current = await loadStore();
+  const ack = await bridgePost(current.settings, '/v1/confirm', { id: pending.id });
+  if (ack.proceed !== true) return false;
+  await updateStore((store) => ({ ...store, pendingApproval: pending, approval: null }));
+  const deadline = pending.expiresAt;
+  while (Date.now() < deadline) {
+    await sleep(300);
+    const latest = await loadStore();
+    if (latest.approval?.id !== pending.id) continue;
+    const allow = latest.approval.allow;
+    await updateStore((store) => ({ ...store, pendingApproval: null, approval: null }));
+    return allow;
+  }
+  await updateStore((store) => ({
+    ...store,
+    pendingApproval: store.pendingApproval?.id === pending.id ? null : store.pendingApproval,
+    approval: store.approval?.id === pending.id ? null : store.approval,
+  }));
+  return false;
 }
 
 function sleep(ms: number): Promise<void> {
