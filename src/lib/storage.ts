@@ -19,7 +19,7 @@ export async function loadStore(): Promise<Store> {
 export async function updateStore(patch: (store: Store) => Store): Promise<Store> {
   return withLock(async () => {
     const next = patch(await readRaw());
-    await chrome.storage.local.set({ [KEY]: next });
+    await writeRaw(next);
     return next;
   });
 }
@@ -50,17 +50,45 @@ export async function hydrateConfig(): Promise<void> {
 }
 
 export function subscribeStore(onChange: (store: Store) => void): () => void {
-  const listener = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
-    if (area !== 'local' || !changes[KEY]) return;
-    onChange(normalizeStore(changes[KEY].newValue));
+  const area = chromeStorage();
+  if (area?.onChanged) {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>, name: string) => {
+      if (name !== 'local' || !changes[KEY]) return;
+      onChange(normalizeStore(changes[KEY].newValue));
+    };
+    area.onChanged.addListener(listener);
+    return () => area.onChanged.removeListener(listener);
+  }
+
+  const listener = (message: { type?: string; store?: unknown }) => {
+    if (message?.type !== 'STORE_CHANGED') return;
+    onChange(normalizeStore(message.store));
   };
-  chrome.storage.onChanged.addListener(listener);
-  return () => chrome.storage.onChanged.removeListener(listener);
+  chrome.runtime.onMessage.addListener(listener);
+  return () => chrome.runtime.onMessage.removeListener(listener);
 }
 
 async function readRaw(): Promise<Store> {
-  const data = await chrome.storage.local.get(KEY);
-  return normalizeStore(data[KEY] ?? defaultStore());
+  const local = chromeStorage()?.local;
+  if (local) {
+    const data = await local.get(KEY);
+    return normalizeStore(data[KEY] ?? defaultStore());
+  }
+  const value = await chrome.runtime.sendMessage({ type: 'STORE_GET' });
+  return normalizeStore(value ?? defaultStore());
+}
+
+async function writeRaw(store: Store): Promise<void> {
+  const local = chromeStorage()?.local;
+  if (local) {
+    await local.set({ [KEY]: store });
+    return;
+  }
+  await chrome.runtime.sendMessage({ type: 'STORE_SET', store });
+}
+
+function chromeStorage(): typeof chrome.storage | undefined {
+  return globalThis.chrome?.storage;
 }
 
 async function withLock<T>(fn: () => Promise<T>): Promise<T> {
