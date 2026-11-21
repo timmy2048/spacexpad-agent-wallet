@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BIND_TOKEN_PATTERN, buildInstallNote, createPairCode } from '../../shared/prompt.ts';
+import { BIND_TOKEN_PATTERN, PAIR_TTL_MS, buildInstallNote, createPairCode } from '../../shared/prompt.ts';
 import { hasAppId, walletReady } from '../../shared/store.ts';
 import { t, testnetConfirmCopy } from '../../shared/i18n.ts';
 import type { Lang, Store } from '../../shared/types.ts';
@@ -369,7 +369,7 @@ function usePairing(store: Store) {
   const copyPrompt = async () => {
     setError(null);
     const code = createPairCode();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
+    const expiresAt = Date.now() + PAIR_TTL_MS;
     await updateStore((current) => ({ ...current, pair: { code, expiresAt, registered: false } }));
     const settings = await ensureBridgeToken(store.settings);
     if (settings.bridgeToken) {

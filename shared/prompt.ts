@@ -12,9 +12,11 @@ export const SPACEXPAD_WALLET_DOCS = 'https://spacexpad.xyz/agent-wallet/skill.m
 
 const INSTALL_SENTENCE = `Read ${SPACEXPAD_WALLET_DOCS} and set up this SpaceXpad agent wallet.`;
 
+export const PAIR_TTL_MS = 30 * 60 * 1000;
+
 export function buildInstallNote(pairCode: string | null): string {
   if (!pairCode) return INSTALL_SENTENCE;
-  return [INSTALL_SENTENCE, '', `PAIR_CODE: ${pairCode}`, 'This code expires in 10 minutes. Do not put it in a public URL.'].join('\n');
+  return [INSTALL_SENTENCE, '', `PAIR_CODE: ${pairCode}`, 'This code expires in 30 minutes. Do not put it in a public URL.'].join('\n');
 }
 
 export function buildPairPrompt(pairCode: string): string {

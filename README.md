@@ -57,7 +57,7 @@ The asset home shows one network at a time, Solana by default or the shared EVM 
 Bind an agent before the wallet can be used:
 
 1. Start the local MCP server (see below). The extension adopts the bridge token from loopback. Do not paste it into Settings.
-2. Copy the install note. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes `PAIR_CODE`. It expires in 10 minutes.
+2. Copy the install note. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes `PAIR_CODE`. It expires in 30 minutes.
 3. The agent calls `spacexpad_pair` and shows an `spx_bind_...` token.
 4. Paste that token into the bind screen. Remove the agent later from the Agent tab to revoke it.
 

@@ -62,7 +62,7 @@ Do not invent other tool names.
 3. Show the returned token that starts with `spx_bind_` and wait until the user pastes it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
-The code expires about 10 minutes after it was copied. The user can remove the binding in the extension. Do not put the pair code or the binding token in a public URL.
+The code expires about 30 minutes after it was copied. The user can remove the binding in the extension. Do not put the pair code or the binding token in a public URL.
 
 ## Mainnet unless the user names a test network
 

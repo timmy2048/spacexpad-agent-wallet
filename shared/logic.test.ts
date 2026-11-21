@@ -223,7 +223,7 @@ describe('prompt and copy', () => {
     const prompt = buildPairPrompt('ABCD2345');
     assert.equal(prompt.split('\n')[0], 'Read https://spacexpad.xyz/agent-wallet/skill.md and set up this SpaceXpad agent wallet.');
     assert.match(prompt, /PAIR_CODE: ABCD2345/);
-    assert.match(prompt, /10 minutes/);
+    assert.match(prompt, /30 minutes/);
     assert.doesNotMatch(prompt, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
     assert.doesNotMatch(prompt, /npm install/);
     assert.doesNotMatch(prompt, /mcp\/src\/index\.ts/);

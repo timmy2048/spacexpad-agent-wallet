@@ -70,7 +70,7 @@ Replace the `cwd` with the real absolute path. After the client connects, tool d
 - `spacexpad_sign_transaction`
 - `spacexpad_send_transaction`
 
-The copied pair prompt is short. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes the pair code. Pairing expires in 10 minutes. The user pastes the `spx_bind_` token into the extension bind screen, not into Settings. Removing the last agent closes the wallet until another agent is bound.
+The copied pair prompt is short. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes the pair code. Pairing expires in 30 minutes. The user pastes the `spx_bind_` token into the extension bind screen, not into Settings. Removing the last agent closes the wallet until another agent is bound.
 
 ## Networks
 

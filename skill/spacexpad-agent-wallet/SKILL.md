@@ -50,7 +50,7 @@ Discover tools from the running server. It registers only:
 3. Show the returned `spx_bind_...` token to the user and wait until they paste it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
-The code expires about 10 minutes after it was copied. The user can remove a binding in the extension.
+The code expires about 30 minutes after it was copied. The user can remove a binding in the extension.
 
 ## Mainnet unless the user names a test network
 
