@@ -31,4 +31,5 @@ export const MCP_TOOL_NAMES = [
   'spacexpad_get_balance',
   'spacexpad_sign_transaction',
   'spacexpad_send_transaction',
+  'spacexpad_sign_message',
 ] as const;

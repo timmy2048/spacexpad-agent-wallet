@@ -74,7 +74,7 @@ export type Activity = {
   id: string;
   at: number;
   agentName: string;
-  method: 'balance' | 'sign' | 'send';
+  method: 'balance' | 'sign' | 'send' | 'sign_message';
   chain: ChainId;
   network: NetworkId;
   status: 'ok' | 'blocked' | 'error';
@@ -96,11 +96,12 @@ export type Settings = {
 
 export type PendingApproval = {
   id: string;
-  method: 'sign' | 'send';
+  method: 'sign' | 'send' | 'sign_message';
   chain: ChainId;
   network: NetworkId;
   agentName: string;
   expiresAt: number;
+  message?: string;
 };
 
 export type ApprovalDecision = {
@@ -139,9 +140,20 @@ export type TxParams = {
   serialized?: string;
 };
 
+export type MessageEncoding = 'utf8' | 'hex' | 'base64';
+
+export type SignMessageParams = {
+  bindToken: string;
+  chain: ChainId;
+  network?: string;
+  message: string;
+  encoding?: MessageEncoding;
+};
+
 export type Inbound =
   | { id: string; method: 'get_addresses'; params: { bindToken: string } }
   | { id: string; method: 'get_balance'; params: { bindToken: string; chain: ChainId; network?: string } }
-  | { id: string; method: 'sign' | 'send'; params: TxParams };
+  | { id: string; method: 'sign' | 'send'; params: TxParams }
+  | { id: string; method: 'sign_message'; params: SignMessageParams };
 
 export type AgentResult = { ok: true; result: unknown } | { ok: false; error: string; code?: DenialCode };

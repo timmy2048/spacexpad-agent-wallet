@@ -91,7 +91,7 @@ Cursor or Claude Desktop:
 }
 ```
 
-The registered tools are `spacexpad_pair`, `spacexpad_get_addresses`, `spacexpad_get_balance`, `spacexpad_sign_transaction`, and `spacexpad_send_transaction`. The skill is `skill/spacexpad-agent-wallet/SKILL.md`.
+The registered tools are `spacexpad_pair`, `spacexpad_get_addresses`, `spacexpad_get_balance`, `spacexpad_sign_transaction`, `spacexpad_send_transaction`, and `spacexpad_sign_message`. The skill is `skill/spacexpad-agent-wallet/SKILL.md`. `spacexpad_sign_message` signs a Solana message, not a transaction. The review copy to publish at `https://spacexpad.xyz/agent-wallet/skill.md` is `docs/agent-wallet/skill.md`.
 
 Chain strings are `solana`, `ethereum`, `base`, and `bnb`. Omit `network` for mainnet. Solana does not accept `testnet` (use `devnet` only when the user asked for it). EVM chains do not accept `devnet` (Ethereum and Base testnet is Sepolia; BNB Chain testnet is BSC testnet). Explicit testnet or devnet signing waits for a popup confirmation.
 

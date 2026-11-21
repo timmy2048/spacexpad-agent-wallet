@@ -30,9 +30,11 @@ function Offscreen() {
 }
 
 function BridgeLoop() {
-  const { sign } = useVault();
+  const { sign, signMessage } = useVault();
   const signRef = useRef(sign);
   signRef.current = sign;
+  const signMessageRef = useRef(signMessage);
+  signMessageRef.current = signMessage;
   useEffect(() => {
     let stopped = false;
     const loop = async () => {
@@ -62,6 +64,7 @@ function BridgeLoop() {
               load: loadStore,
               update: updateStore,
               sign: (params, rpcUrl, method) => signRef.current(params, rpcUrl, method),
+              signMessage: (input) => signMessageRef.current(input),
               confirm: async (id) => {
                 const latest = await loadStore();
                 const answer = await bridgePost(latest.settings, '/v1/confirm', { id });

@@ -158,3 +158,80 @@ describe('mainnet view versus explicit network actions', () => {
     assert.equal(box.current().activity[0]?.status, 'blocked');
   });
 });
+
+describe('message signing', () => {
+  const message = 'AgentPad Solana Gate Auth\nWallet: abc\nNonce: 1\nExpires: 2';
+
+  it('asks for confirmation on mainnet and returns a verifiable signature', async () => {
+    const nacl = (await import('tweetnacl')).default;
+    const pair = nacl.sign.keyPair();
+    const { signatureBase58 } = await import('../../shared/message.ts');
+    const address = signatureBase58(pair.publicKey);
+    let confirmed = false;
+    const box = harness(
+      readyStore({ addresses: { solana: address, evm: '0x1111111111111111111111111111111111111111' } }),
+      {
+        approveNonMainnet: async (pending) => {
+          confirmed = pending.method === 'sign_message' && pending.network === 'mainnet' && pending.message === message;
+          return true;
+        },
+        signMessage: async (input) => ({
+          publicKey: address,
+          signature: nacl.sign.detached(input.message, pair.secretKey),
+        }),
+      },
+    );
+    const result = await handleAgentRequest(box.deps, {
+      id: 'm1',
+      method: 'sign_message',
+      params: { bindToken: TOKEN, chain: 'solana', message, encoding: 'utf8' },
+    });
+    assert.equal(confirmed, true);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const body = result.result as { signature: string; signatureEncoding: string; publicKey: string; network: string };
+      assert.equal(body.publicKey, address);
+      assert.equal(body.signatureEncoding, 'base64');
+      assert.equal(body.network, 'mainnet');
+      const raw = Uint8Array.from(Buffer.from(body.signature, 'base64'));
+      assert.equal(nacl.sign.detached.verify(new TextEncoder().encode(message), raw, pair.publicKey), true);
+    }
+  });
+
+  it('does not sign a mainnet message the user rejects', async () => {
+    let signed = false;
+    const box = harness(readyStore(), {
+      approveNonMainnet: async () => false,
+      signMessage: async () => {
+        signed = true;
+        return { signature: new Uint8Array(64), publicKey: 'x' };
+      },
+    });
+    const result = await handleAgentRequest(box.deps, {
+      id: 'm2',
+      method: 'sign_message',
+      params: { bindToken: TOKEN, chain: 'solana', message: 'hello' },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(signed, false);
+    if (!result.ok) assert.match(result.error, /not confirmed/);
+  });
+
+  it('rejects ethereum and solana testnet instead of signing', async () => {
+    const box = harness(readyStore(), { approveNonMainnet: async () => true });
+    const evm = await handleAgentRequest(box.deps, {
+      id: 'm3',
+      method: 'sign_message',
+      params: { bindToken: TOKEN, chain: 'ethereum', message: 'hello' },
+    });
+    assert.equal(evm.ok, false);
+    if (!evm.ok) assert.match(evm.error, /Solana only/);
+    const testnet = await handleAgentRequest(box.deps, {
+      id: 'm4',
+      method: 'sign_message',
+      params: { bindToken: TOKEN, chain: 'solana', network: 'testnet', message: 'hello' },
+    });
+    assert.equal(testnet.ok, false);
+    if (!testnet.ok) assert.match(testnet.error, /devnet/);
+  });
+});

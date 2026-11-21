@@ -106,6 +106,7 @@ const EN = {
   methodBalance: 'Balance',
   methodSign: 'Sign',
   methodSend: 'Send',
+  methodSignMessage: 'Sign message',
 } as const;
 
 export type CopyKey = keyof typeof EN;
@@ -215,6 +216,7 @@ const ZH_CN: Record<CopyKey, string> = {
   methodBalance: '余额',
   methodSign: '签名',
   methodSend: '发送',
+  methodSignMessage: '签名消息',
 };
 
 const ZH_TW: Record<CopyKey, string> = {
@@ -322,6 +324,7 @@ const ZH_TW: Record<CopyKey, string> = {
   methodBalance: '餘額',
   methodSign: '簽名',
   methodSend: '送出',
+  methodSignMessage: '簽名訊息',
 };
 
 const TABLES: Record<Lang, Record<CopyKey, string>> = {
@@ -365,6 +368,14 @@ export function testnetConfirmCopy(
   }
   const action = method === 'send' ? 'send' : 'sign';
   return `${agent} asked to ${action} on ${where}. This is a test network. Nothing is signed until you confirm.`;
+}
+
+export function messageSignCopy(lang: Lang, agent: string, chain: ChainId, network: NetworkId): string {
+  const cluster = clusterLabel(lang, chain, network);
+  const where = [chainName(lang, chain), cluster].filter(Boolean).join(' ');
+  if (lang === 'zh-CN') return `${agent} 请求用 ${where} 签名下面的消息。确认后才会签名。`;
+  if (lang === 'zh-TW') return `${agent} 要求用 ${where} 簽名下面的訊息。確認後才會簽名。`;
+  return `${agent} asked to sign the message below with ${where}. Nothing is signed until you confirm.`;
 }
 
 export function clusterLabel(lang: Lang, chain: ChainId, network: NetworkId): string {

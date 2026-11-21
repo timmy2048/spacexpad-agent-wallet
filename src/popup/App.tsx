@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BIND_TOKEN_PATTERN, PAIR_TTL_MS, buildInstallNote, createPairCode } from '../../shared/prompt.ts';
 import { hasAppId, walletReady } from '../../shared/store.ts';
-import { t, testnetConfirmCopy } from '../../shared/i18n.ts';
+import { messageSignCopy, t, testnetConfirmCopy } from '../../shared/i18n.ts';
 import type { Lang, Store } from '../../shared/types.ts';
 import { copyText } from '../lib/copyText.ts';
 import { bridgePost, ensureBridgeToken, registerStoredPair, updateStore } from '../lib/storage.ts';
@@ -314,18 +314,18 @@ function BrandHeader({ lang }: { lang: Lang }) {
 }
 
 function ApprovalBanner({ store }: { store: Store }) {
-  if (!store.pendingApproval) return null;
+  const pending = store.pendingApproval;
+  if (!pending) return null;
+  const text =
+    pending.method === 'sign_message'
+      ? messageSignCopy(store.language, pending.agentName, pending.chain, pending.network)
+      : testnetConfirmCopy(store.language, pending.method, pending.agentName, pending.chain, pending.network);
   return (
     <Banner>
-      <p>
-        {testnetConfirmCopy(
-          store.language,
-          store.pendingApproval.method,
-          store.pendingApproval.agentName,
-          store.pendingApproval.chain,
-          store.pendingApproval.network,
-        )}
-      </p>
+      <div>
+        <p>{text}</p>
+        {pending.message ? <pre className="message-preview">{pending.message}</pre> : null}
+      </div>
       <div className="actions">
         <button type="button" className="quiet-button" onClick={() => void decide(store.pendingApproval?.id ?? '', false)}>
           {t(store.language, 'rejectTestnet')}

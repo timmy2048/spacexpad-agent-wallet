@@ -390,6 +390,17 @@ textarea.prompt {
   border-radius: 14px;
 }
 .banner p { margin: 0; font-size: 13px; }
+.message-preview {
+  margin: 8px 0 0;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink);
+}
 .banner .actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 .activity-list { list-style: none; margin: 8px 0 0; padding: 0; }

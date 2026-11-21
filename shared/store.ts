@@ -64,7 +64,11 @@ export function normalizeStore(value: unknown): Store {
 }
 
 function pendingShape(value: Store['pendingApproval'] | undefined): value is NonNullable<Store['pendingApproval']> {
-  return Boolean(value && typeof value.id === 'string' && (value.method === 'sign' || value.method === 'send'));
+  return Boolean(
+    value &&
+      typeof value.id === 'string' &&
+      (value.method === 'sign' || value.method === 'send' || value.method === 'sign_message'),
+  );
 }
 
 function approvalShape(value: Store['approval'] | undefined): value is NonNullable<Store['approval']> {

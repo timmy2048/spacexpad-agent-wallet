@@ -52,6 +52,7 @@ After the client connects, discover tools from the server. It registers only the
 - `spacexpad_get_balance`
 - `spacexpad_sign_transaction`
 - `spacexpad_send_transaction`
+- `spacexpad_sign_message`
 
 Do not invent other tool names.
 
@@ -72,7 +73,7 @@ Omit `network` to use mainnet. The wallet view is mainnet as well. Pass `testnet
 
 Solana test traffic is `devnet`, not `testnet`. Ethereum and Base `testnet` means Sepolia. BNB Chain `testnet` means BSC testnet. `devnet` is valid only for Solana.
 
-A testnet or devnet signature or send waits for confirmation in the extension. Nothing is signed until the user confirms. Mainnet does not ask that extra question. The risk policy and the kill switch still apply on every network.
+A testnet or devnet transaction signature or send waits for confirmation in the extension. Nothing is signed until the user confirms. A mainnet transaction does not ask that extra question. Message signing always asks, including on mainnet. The risk policy and the kill switch still apply.
 
 ## Tools
 
@@ -80,6 +81,15 @@ A testnet or devnet signature or send waits for confirmation in the extension. N
 - `spacexpad_get_balance` reads the native balance and other fungible tokens for the chain you pass. A zero native balance is a completed read. If `tokenListError` is set, say the token list failed instead of claiming the wallet holds only the native asset. Solana token symbols that cannot be resolved are a shortened mint. NFTs are not listed.
 - `spacexpad_sign_transaction` signs and returns the signed transaction. It does not broadcast. Do not tell the user it was sent.
 - `spacexpad_send_transaction` signs and submits. Report a hash only when the result includes one. Status `submitted` means the RPC accepted it, not that it is confirmed.
+- `spacexpad_sign_message` signs arbitrary bytes with the bound Solana wallet. It is not a transaction signature. `chain` must be `solana`. Omit `network` for mainnet, or pass `devnet` when the user asked for Solana test traffic. `encoding` defaults to `utf8`: the exact UTF-8 bytes of `message` are signed, with no prefix and no wrapping. Pass `hex` (optional `0x`) or `base64` only when the message is not text. The popup shows that text and waits for Confirm on every network, including mainnet. The result `signature` is base64. `POST https://spacexpad.xyz/api/agent/verify` expects `{ "wallet": "<publicKey>", "signature": "<that base64>" }` because `verifyChallengeWithWalletPubkey` decodes the signature as base64 over the challenge `message` UTF-8 bytes. `signatureBase58` is the same signature bytes. Do not send a transaction signature to that endpoint.
+
+## Manual message-sign check
+
+1. Bind an agent and copy the Solana address from the wallet.
+2. `GET https://spacexpad.xyz/api/agent/challenge?wallet=<that address>` and keep the `message` string exactly.
+3. Call `spacexpad_sign_message` with `chain: "solana"`, `encoding: "utf8"`, and that `message`. Confirm in the popup.
+4. `POST https://spacexpad.xyz/api/agent/verify` with `{ "wallet": "<publicKey>", "signature": "<signature>" }` using the base64 `signature` field.
+5. A successful session returns `ok: true` and a `sessionToken`. A transaction signature will not pass.
 
 `kind` is `native_transfer` (`to` plus a human `amount`) or `serialized` (a hex or base64 transaction).
 

@@ -266,7 +266,16 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
               return (
                 <li key={item.id} role="listitem">
                   <span>
-                    {t(lang, item.method === 'balance' ? 'methodBalance' : item.method === 'sign' ? 'methodSign' : 'methodSend')}
+                    {t(
+                      lang,
+                      item.method === 'balance'
+                        ? 'methodBalance'
+                        : item.method === 'sign'
+                          ? 'methodSign'
+                          : item.method === 'sign_message'
+                            ? 'methodSignMessage'
+                            : 'methodSend',
+                    )}
                     {' · '}
                     {where}
                   </span>
