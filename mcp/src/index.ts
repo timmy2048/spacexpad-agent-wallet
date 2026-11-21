@@ -189,7 +189,7 @@ async function main(): Promise<void> {
     },
     async ({ pairCode, agentName }) => {
       try {
-        const issued = bridge.issue(pairCode, agentName);
+        const issued = await bridge.issueWhenRegistered(pairCode, agentName);
         await saveDisk();
         return toolText({
           ...issued,

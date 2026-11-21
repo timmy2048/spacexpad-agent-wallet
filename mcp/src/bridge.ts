@@ -36,6 +36,19 @@ export function createBridge() {
     pairs.set(code, { code, expiresAt });
   }
 
+  async function issueWhenRegistered(
+    code: string,
+    agentName: string,
+    waitMs = 8000,
+  ): Promise<{ bindToken: string; agentId: string; agentName: string }> {
+    const deadline = Date.now() + waitMs;
+    while (!pairs.has(code)) {
+      if (Date.now() >= deadline) break;
+      await sleep(150);
+    }
+    return issue(code, agentName);
+  }
+
   function issue(code: string, agentName: string): { bindToken: string; agentId: string; agentName: string } {
     const pair = pairs.get(code);
     if (!pair || pair.expiresAt < Date.now()) throw new Error('That pairing code is unknown or expired.');
@@ -159,6 +172,7 @@ export function createBridge() {
     connected,
     registerPair,
     issue,
+    issueWhenRegistered,
     redeem,
     unbind,
     isRedeemed,
@@ -172,6 +186,12 @@ export function createBridge() {
 }
 
 export type Bridge = ReturnType<typeof createBridge>;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function timedOut(job: Job): Promise<AgentResult> {
   return new Promise((resolve) => {

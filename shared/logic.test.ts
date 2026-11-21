@@ -235,10 +235,12 @@ describe('prompt and copy', () => {
     assert.equal(MCP_TOOL_NAMES.includes('spacexpad_pair'), true);
   });
 
-  it('omits the pair code when the local server is down', () => {
-    const note = buildInstallNote(null);
-    assert.equal(note, 'Read https://spacexpad.xyz/agent-wallet/skill.md and set up this SpaceXpad agent wallet.');
-    assert.doesNotMatch(note, /PAIR_CODE/);
+  it('includes the pair code in the first copy', () => {
+    const note = buildInstallNote('ABCD2345');
+    assert.match(note, /^Read https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md and set up this SpaceXpad agent wallet\./);
+    assert.match(note, /PAIR_CODE: ABCD2345/);
+    assert.doesNotMatch(note, /npm install/);
+    assert.doesNotMatch(note, /copy again/i);
   });
 
   it('keeps the wallet closed until an agent is bound', () => {

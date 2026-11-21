@@ -4,7 +4,7 @@ import { hasAppId, walletReady } from '../../shared/store.ts';
 import { t, testnetConfirmCopy } from '../../shared/i18n.ts';
 import type { Lang, Store } from '../../shared/types.ts';
 import { copyText } from '../lib/copyText.ts';
-import { bridgePost, ensureBridgeToken, updateStore } from '../lib/storage.ts';
+import { bridgePost, ensureBridgeToken, registerStoredPair, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
 import { AssetHome } from '../ui/AssetHome.tsx';
 import { brandIcon } from '../ui/brand.ts';
@@ -368,27 +368,25 @@ function usePairing(store: Store) {
 
   const copyPrompt = async () => {
     setError(null);
-    let pairCode: string | null = null;
-    let serverDown = false;
+    const code = createPairCode();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+    await updateStore((current) => ({ ...current, pair: { code, expiresAt, registered: false } }));
     const settings = await ensureBridgeToken(store.settings);
-    if (!settings.bridgeToken) {
-      serverDown = true;
-    } else {
-      const code = createPairCode();
-      const expiresAt = Date.now() + 10 * 60 * 1000;
+    if (settings.bridgeToken) {
       try {
-        await bridgePost(settings, '/v1/pair/register', { pairCode: code, expiresAt });
-        pairCode = code;
-        await updateStore((current) => ({ ...current, pair: { code, expiresAt } }));
+        await registerStoredPair(settings, { code, expiresAt });
+        await updateStore((current) =>
+          current.pair?.code === code ? { ...current, pair: { ...current.pair, registered: true } } : current,
+        );
       } catch {
-        serverDown = true;
+        // The offscreen loop registers this code when the local server appears.
       }
     }
-    const note = buildInstallNote(pairCode);
+    const note = buildInstallNote(code);
     const wrote = await copyText(note);
     setCopied(wrote);
     setFallback(wrote ? null : note);
-    setNotice(serverDown ? `${t(lang, 'bridgeDown')} ${t(lang, 'copyAgain')}` : null);
+    setNotice(wrote ? t(lang, 'copyHint') : null);
   };
 
   const bind = async () => {

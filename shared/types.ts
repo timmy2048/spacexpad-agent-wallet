@@ -119,7 +119,7 @@ export type Store = {
   activity: Activity[];
   spend: { date: string; microUsd: string };
   snapshots: Snapshot[];
-  pair: { code: string; expiresAt: number } | null;
+  pair: { code: string; expiresAt: number; registered?: boolean } | null;
   pendingApproval: PendingApproval | null;
   approval: ApprovalDecision | null;
   settings: Settings;

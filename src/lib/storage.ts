@@ -128,6 +128,15 @@ export async function ensureBridgeToken(settings: Settings): Promise<Settings> {
   return next.settings;
 }
 
+export async function registerStoredPair(
+  settings: Settings,
+  pair: { code: string; expiresAt: number } | null,
+): Promise<boolean> {
+  if (!pair || pair.expiresAt < Date.now() || !settings.bridgeToken.trim()) return false;
+  await bridgePost(settings, '/v1/pair/register', { pairCode: pair.code, expiresAt: pair.expiresAt });
+  return true;
+}
+
 export async function bridgePost(settings: Settings, path: string, body: unknown): Promise<Record<string, unknown>> {
   let response: Response;
   try {

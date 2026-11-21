@@ -17,6 +17,15 @@ describe('bridge pairing', () => {
     assert.equal(bridge.isRedeemed(issued.bindToken), false);
   });
 
+  it('accepts a pair call that arrives just before the extension registers the code', async () => {
+    const bridge = createBridge();
+    const pending = bridge.issueWhenRegistered('LATE1234', 'Ada', 1000);
+    setTimeout(() => bridge.registerPair('LATE1234', Date.now() + 60_000), 200);
+    const issued = await pending;
+    assert.match(issued.bindToken, /^spx_bind_[a-f0-9]{48}$/);
+    assert.equal(issued.agentName, 'Ada');
+  });
+
   it('refuses wallet calls before the extension is connected', async () => {
     const bridge = createBridge();
     const result = await bridge.request({
