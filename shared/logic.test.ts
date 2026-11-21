@@ -6,7 +6,7 @@ import { browserRpcUrl, resolveCluster } from './chains.ts';
 import { evmCallFromSerialized, evmDestinations } from './evmIntent.ts';
 import { copyKeys, t } from './i18n.ts';
 import { evaluatePolicy } from './policy.ts';
-import { buildPairPrompt, MCP_TOOL_NAMES } from './prompt.ts';
+import { buildInstallNote, buildPairPrompt, MCP_TOOL_NAMES } from './prompt.ts';
 import { defaultStore, isDisplayName, walletReady } from './store.ts';
 import { DEFAULT_POLICY } from './types.ts';
 import { CHAIN_ORDER } from './types.ts';
@@ -231,6 +231,22 @@ describe('prompt and copy', () => {
     assert.equal(prompt.split('\n').length < 20, true);
     assert.equal(prompt.includes('尚未读取'), false);
     assert.equal(MCP_TOOL_NAMES.includes('spacexpad_pair'), true);
+    assert.match(prompt, /npm install/);
+    assert.match(prompt, /node --experimental-strip-types mcp\/src\/index.ts/);
+  });
+
+  it('copies an install note with no pair code when the local server is down', () => {
+    const note = buildInstallNote(null);
+    assert.match(note, /https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md/);
+    assert.match(note, /npm install/);
+    assert.match(note, /node --experimental-strip-types mcp\/src\/index.ts/);
+    assert.match(note, /127\.0\.0\.1:47321/);
+    assert.match(note, /do not ask the user to paste a bridge token into settings/i);
+    assert.doesNotMatch(note, /^PAIR_CODE:/m);
+    assert.doesNotMatch(note, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
+    const unregistered = buildInstallNote('ABCD2345', false);
+    assert.match(unregistered, /PAIR_CODE: ABCD2345/);
+    assert.match(unregistered, /copy the install note again/i);
   });
 
   it('keeps the wallet closed until an agent is bound', () => {

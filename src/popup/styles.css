@@ -284,6 +284,21 @@ button:disabled { cursor: default; }
 .field input::placeholder { color: var(--mute); }
 .field input:focus-visible { border-color: var(--accent); }
 
+textarea.prompt {
+  width: 100%;
+  min-height: 140px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--mute);
+}
+
 .note, .meta { color: var(--mute); }
 .note { margin: 8px 0 0; font-size: 13px; }
 .lead { margin: 10px 0 0; font-size: 15px; font-weight: 500; }

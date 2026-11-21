@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { BIND_TOKEN_PATTERN, buildPairPrompt, createPairCode } from '../../shared/prompt.ts';
+import { BIND_TOKEN_PATTERN, buildInstallNote, createPairCode } from '../../shared/prompt.ts';
 import { hasAppId, walletReady } from '../../shared/store.ts';
 import { t, testnetConfirmCopy } from '../../shared/i18n.ts';
 import type { Lang, Store } from '../../shared/types.ts';
+import { copyText } from '../lib/copyText.ts';
 import { bridgePost, ensureBridgeToken, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
 import { AssetHome } from '../ui/AssetHome.tsx';
 import { brandIcon } from '../ui/brand.ts';
-import { Banner, BindScreen } from '../ui/BindScreen.tsx';
+import { Banner, BindScreen, CopyFallback } from '../ui/BindScreen.tsx';
 import { LoginScreen, type OtpPhase } from '../ui/LoginScreen.tsx';
 import { SettingsPanel } from '../ui/SettingsPanel.tsx';
 import { useExtensionStore } from './useStore.ts';
@@ -232,6 +233,7 @@ function BindGate({ store, logout }: { store: Store; logout: () => void }) {
           token={pairing.token}
           copied={pairing.copied}
           error={pairing.error}
+          fallback={pairing.fallback}
           onToken={pairing.setToken}
           onCopy={() => void pairing.copyPrompt()}
           onBind={() => void pairing.bind()}
@@ -360,32 +362,32 @@ function usePairing(store: Store) {
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState('');
   const [copied, setCopied] = useState(false);
+  const [fallback, setFallback] = useState<string | null>(null);
 
   const copyPrompt = async () => {
+    let pairCode: string | null = null;
+    let registered = false;
+    let status: string | null = null;
     const settings = await ensureBridgeToken(store.settings);
     if (!settings.bridgeToken) {
-      setCopied(false);
-      setError(t(lang, 'bridgeDown'));
-      return;
+      status = t(lang, 'bridgeDown');
+    } else {
+      const code = createPairCode();
+      pairCode = code;
+      const expiresAt = Date.now() + 10 * 60 * 1000;
+      await updateStore((current) => ({ ...current, pair: { code, expiresAt } }));
+      try {
+        await bridgePost(settings, '/v1/pair/register', { pairCode: code, expiresAt });
+        registered = true;
+      } catch (reason) {
+        status = reason instanceof Error ? reason.message : t(lang, 'bridgeDown');
+      }
     }
-    const code = createPairCode();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
-    await updateStore((current) => ({ ...current, pair: { code, expiresAt } }));
-    try {
-      await bridgePost(settings, '/v1/pair/register', { pairCode: code, expiresAt });
-    } catch (reason) {
-      setCopied(false);
-      setError(reason instanceof Error ? reason.message : t(lang, 'bridgeDown'));
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(buildPairPrompt(code));
-      setCopied(true);
-      setError(null);
-    } catch {
-      setCopied(false);
-      setError(t(lang, 'couldNotCopy'));
-    }
+    const note = buildInstallNote(pairCode, registered);
+    const wrote = await copyText(note);
+    setCopied(wrote);
+    setFallback(wrote ? null : note);
+    setError(status);
   };
 
   const bind = async () => {
@@ -424,7 +426,7 @@ function usePairing(store: Store) {
     }
   };
 
-  return { error, token, setToken, copied, copyPrompt, bind };
+  return { error, token, setToken, copied, fallback, copyPrompt, bind };
 }
 
 function AgentPanel({ store }: { store: Store }) {
@@ -452,6 +454,14 @@ function AgentPanel({ store }: { store: Store }) {
       <button type="button" className="primary" onClick={() => void pairing.copyPrompt()}>
         {pairing.copied ? t(lang, 'promptCopied') : t(lang, 'copyPrompt')}
       </button>
+      {pairing.fallback ? (
+        <>
+          <p className="error" role="alert">
+            {t(lang, 'couldNotCopy')}
+          </p>
+          <CopyFallback lang={lang} text={pairing.fallback} />
+        </>
+      ) : null}
       <label className="field" htmlFor="rebind-token">
         <span>{t(lang, 'tokenLabel')}</span>
         <input

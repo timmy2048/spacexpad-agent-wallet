@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { t } from '../../shared/i18n.ts';
 import type { Lang } from '../../shared/types.ts';
 
@@ -7,6 +7,7 @@ export function BindScreen({
   token,
   copied,
   error,
+  fallback = null,
   onToken,
   onCopy,
   onBind,
@@ -17,6 +18,7 @@ export function BindScreen({
   token: string;
   copied: boolean;
   error: string | null;
+  fallback?: string | null;
   onToken: (value: string) => void;
   onCopy: () => void;
   onBind: () => void;
@@ -31,6 +33,14 @@ export function BindScreen({
       <button type="button" className="primary" onClick={onCopy}>
         {copied ? t(lang, 'promptCopied') : t(lang, 'copyPrompt')}
       </button>
+      {fallback ? (
+        <>
+          <p className="error" role="alert">
+            {t(lang, 'couldNotCopy')}
+          </p>
+          <CopyFallback lang={lang} text={fallback} />
+        </>
+      ) : null}
       <label className="field" htmlFor="bind-token">
         <span>{t(lang, 'tokenLabel')}</span>
         <input
@@ -55,6 +65,26 @@ export function BindScreen({
         {t(lang, 'logout')}
       </button>
     </section>
+  );
+}
+
+export function CopyFallback({ lang, text }: { lang: Lang; text: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.focus();
+    node.select();
+  }, [text]);
+  return (
+    <textarea
+      ref={ref}
+      className="prompt"
+      readOnly
+      value={text}
+      aria-label={t(lang, 'copyPrompt')}
+      onFocus={(event) => event.currentTarget.select()}
+    />
   );
 }
 
