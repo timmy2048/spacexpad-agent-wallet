@@ -3,7 +3,7 @@ import { homeChains, type HomeId } from '../../shared/assets.ts';
 import { chainName, t } from '../../shared/i18n.ts';
 import { displayAmount, truncateAddress } from '../../shared/money.ts';
 import type { Asset, ChainId, Lang, Snapshot } from '../../shared/types.ts';
-import { ChevronIcon, CopyIcon, NetworkGlyph, TokenGlyph } from './icons.tsx';
+import { ChevronIcon, CopyIcon, TokenGlyph } from './icons.tsx';
 
 export function AssetHome({
   lang,
@@ -65,9 +65,8 @@ export function AssetHome({
   return (
     <section className="home" aria-labelledby="assets-title">
       <h2 id="assets-title" className="who">
-        {username || 'wallet'}
+        @{username || 'wallet'}
       </h2>
-      <p className="status">{t(lang, 'bound')}</p>
       <div
         className="net"
         ref={rootRef}
@@ -79,7 +78,6 @@ export function AssetHome({
       >
         <div className="net-row">
           <button type="button" className="net-main" aria-expanded={open} aria-controls="network-menu" onClick={() => setOpen((value) => !value)}>
-            <NetworkGlyph home={home} />
             <span className="net-name">{home === 'solana' ? 'Solana' : t(lang, 'evmName')}</span>
             <span className="addr">{addressFor(home) ? truncateAddress(addressFor(home) as string, home === 'solana' ? 'solana' : 'evm') : '—'}</span>
           </button>
@@ -110,7 +108,6 @@ export function AssetHome({
                       setOpen(false);
                     }}
                   >
-                    <NetworkGlyph home={id} />
                     <span className="net-name">{id === 'solana' ? 'Solana' : t(lang, 'evmName')}</span>
                     <span className="addr">{address ? truncateAddress(address, id === 'solana' ? 'solana' : 'evm') : '—'}</span>
                   </button>

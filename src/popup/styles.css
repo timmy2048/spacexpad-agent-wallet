@@ -65,7 +65,7 @@ button:disabled { cursor: default; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 16px 16px 0;
+  padding: 20px 16px 0;
 }
 
 .top img {
@@ -90,20 +90,14 @@ button:disabled { cursor: default; }
 }
 
 .who {
-  margin: 18px 0 0;
-  font-size: 28px;
+  margin: 36px 0 0;
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
-.status {
-  margin: 4px 0 0;
-  color: var(--mute);
-  font-size: 13px;
-}
-
-.net { position: relative; margin-top: 16px; }
+.net { position: relative; margin-top: 28px; }
 
 .net-row, .menu-row {
   display: grid;
@@ -128,11 +122,12 @@ button:disabled { cursor: default; }
 
 .net-main {
   display: grid;
-  grid-template-columns: 36px auto minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
   min-width: 0;
   min-height: 44px;
+  padding-left: 4px;
   text-align: left;
 }
 
@@ -314,7 +309,7 @@ textarea.prompt {
 }
 .panel h2:first-child { margin-top: 8px; }
 
-.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .choices button {
   min-height: 32px;
   padding: 0 12px;
@@ -339,6 +334,46 @@ textarea.prompt {
   border-radius: 14px;
   font-size: 14px;
 }
+
+.settings-id { margin-bottom: 4px; }
+
+.settings-group {
+  margin-top: 28px;
+  background: var(--panel);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-top: 1px solid var(--rule);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings-row:first-child { border-top: 0; }
+
+.row-chev { color: var(--mute); font-size: 18px; line-height: 1; }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.logout-home { margin-top: 16px; }
 
 .quiet-button { color: var(--mute); min-height: 32px; }
 .quiet-button:hover { color: var(--ink); }
