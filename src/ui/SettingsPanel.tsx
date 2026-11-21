@@ -5,12 +5,21 @@ import { isDisplayName } from '../../shared/store.ts';
 import type { Store } from '../../shared/types.ts';
 import { updateStore } from '../lib/storage.ts';
 import { LanguageChoices } from './BindScreen.tsx';
+import { SettingsGlyph, type SettingsIconName } from './icons.tsx';
 
-type Page = 'home' | 'name' | 'language' | 'risk' | 'whitelist' | 'activity';
+type Page = 'home' | 'name' | 'language' | 'risk' | 'whitelist' | 'activity' | 'network';
 
-export function SettingsPanel({ store, logout }: { store: Store; logout: () => void }) {
+export function SettingsPanel({
+  store,
+  logout,
+  initialPage = 'home',
+}: {
+  store: Store;
+  logout: () => void;
+  initialPage?: Page;
+}) {
   const lang = store.language;
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(initialPage);
   const [username, setUsername] = useState(store.username);
   const [single, setSingle] = useState(store.policy.singleTxUsd?.toString() ?? '');
   const [daily, setDaily] = useState(store.policy.dailyUsd?.toString() ?? '');
@@ -30,6 +39,10 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
     setPage(next);
   };
 
+  const chooseView = (assetView: Store['assetView']) => {
+    void updateStore((current) => ({ ...current, assetView }));
+  };
+
   const saveAccount = () => {
     if (!isDisplayName(username)) {
       setError(t(lang, 'invalidUsername'));
@@ -47,16 +60,14 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
 
   if (page === 'home') {
     return (
-      <section className="panel" aria-labelledby="settings-title">
-        <h2 id="settings-title" className="who settings-id">
-          @{store.username || 'wallet'}
-        </h2>
+      <section className="panel" aria-label={t(lang, 'navSettings')}>
         <div className="settings-group">
-          <SettingsRow label={t(lang, 'username')} onOpen={() => open('name')} />
-          <SettingsRow label={t(lang, 'language')} onOpen={() => open('language')} />
-          <SettingsRow label={t(lang, 'risk')} onOpen={() => open('risk')} />
-          <SettingsRow label={t(lang, 'whitelist')} onOpen={() => open('whitelist')} />
-          <SettingsRow label={t(lang, 'activity')} onOpen={() => open('activity')} />
+          <SettingsRow icon="user" label={t(lang, 'username')} onOpen={() => open('name')} />
+          <SettingsRow icon="language" label={t(lang, 'language')} onOpen={() => open('language')} />
+          <SettingsRow icon="risk" label={t(lang, 'risk')} onOpen={() => open('risk')} />
+          <SettingsRow icon="list" label={t(lang, 'whitelist')} onOpen={() => open('whitelist')} />
+          <SettingsRow icon="activity" label={t(lang, 'activity')} onOpen={() => open('activity')} />
+          <SettingsRow icon="network" label={t(lang, 'viewNetwork')} onOpen={() => open('network')} />
         </div>
         <button type="button" className="secondary logout-home" onClick={logout}>
           {t(lang, 'logout')}
@@ -74,7 +85,9 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
           ? t(lang, 'risk')
           : page === 'whitelist'
             ? t(lang, 'whitelist')
-            : t(lang, 'activity');
+            : page === 'activity'
+              ? t(lang, 'activity')
+              : t(lang, 'viewNetwork');
 
   return (
     <section className="panel" aria-labelledby="settings-page-title">
@@ -256,6 +269,19 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
           </button>
         </>
       ) : null}
+      {page === 'network' ? (
+        <>
+          <p className="note">{t(lang, 'viewNetworkHelp')}</p>
+          <div className="choices" role="group" aria-label={t(lang, 'viewNetwork')}>
+            <button type="button" aria-pressed={store.assetView !== 'test'} onClick={() => chooseView('mainnet')}>
+              {t(lang, 'viewMainnet')}
+            </button>
+            <button type="button" aria-pressed={store.assetView === 'test'} onClick={() => chooseView('test')}>
+              {t(lang, 'viewTest')}
+            </button>
+          </div>
+        </>
+      ) : null}
       {page === 'activity' ? (
         <>
           {store.activity.length === 0 ? <p className="note">{t(lang, 'noActivity')}</p> : null}
@@ -298,10 +324,13 @@ export function SettingsPanel({ store, logout }: { store: Store; logout: () => v
   );
 }
 
-function SettingsRow({ label, onOpen }: { label: string; onOpen: () => void }) {
+function SettingsRow({ icon, label, onOpen }: { icon: SettingsIconName; label: string; onOpen: () => void }) {
   return (
     <button type="button" className="settings-row" onClick={onOpen}>
-      <span>{label}</span>
+      <span className="row-label">
+        <SettingsGlyph name={icon} />
+        {label}
+      </span>
       <span className="row-chev" aria-hidden="true">
         ›
       </span>

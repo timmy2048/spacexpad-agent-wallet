@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { serializeTransaction, type Hex } from 'viem';
-import { buildAssetGroups, homeChains, nativeAsset, parseBinplorerTokens, parseBlockscoutTokens, parseJupiterHoldings, parseSolanaTokenAccounts } from './assets.ts';
+import { buildAssetGroups, displayNetwork, homeChains, nativeAsset, parseBinplorerTokens, parseBlockscoutTokens, parseJupiterHoldings, parseSolanaTokenAccounts } from './assets.ts';
 import { browserRpcUrl, resolveCluster } from './chains.ts';
 import { evmCallFromSerialized, evmDestinations } from './evmIntent.ts';
 import { copyKeys, t } from './i18n.ts';
@@ -35,6 +35,49 @@ describe('networks', () => {
 });
 
 describe('assets', () => {
+  it('uses devnet for the Solana test view and leaves omitted agent networks on mainnet', () => {
+    const snapshots = [
+      {
+        chain: 'solana' as const,
+        network: 'mainnet' as const,
+        status: 'ready' as const,
+        error: null,
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('solana', 2n)],
+      },
+      {
+        chain: 'solana' as const,
+        network: 'devnet' as const,
+        status: 'ready' as const,
+        error: null,
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('solana', 9n)],
+      },
+      {
+        chain: 'ethereum' as const,
+        network: 'testnet' as const,
+        status: 'error' as const,
+        error: 'rpc',
+        tokenListError: null,
+        readAt: 1,
+        assets: [],
+      },
+    ];
+    assert.equal(homeChains('solana', snapshots)[0]?.network, 'mainnet');
+    assert.equal(homeChains('solana', snapshots, 'test')[0]?.network, 'devnet');
+    assert.equal(homeChains('solana', snapshots, 'test')[0]?.assets[0]?.amount, nativeAsset('solana', 9n).amount);
+    assert.equal(displayNetwork('solana', 'test'), 'devnet');
+    assert.equal(displayNetwork('ethereum', 'test'), 'testnet');
+    assert.equal(displayNetwork('base', 'test'), 'testnet');
+    assert.equal(displayNetwork('bnb', 'test'), 'testnet');
+    const eth = homeChains('evm', snapshots, 'test').find((cluster) => cluster.chain === 'ethereum');
+    assert.equal(eth?.status, 'error');
+    assert.equal(eth?.assets.length, 0);
+    assert.equal(resolveCluster('solana', undefined).network, 'mainnet');
+  });
+
   it('does not invent a zero before mainnet is read', () => {
     const groups = buildAssetGroups([]);
     assert.deepEqual(

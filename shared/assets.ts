@@ -1,6 +1,6 @@
 import { chainMeta } from './chains.ts';
 import { formatRaw } from './money.ts';
-import type { Asset, ChainId, NetworkId, Snapshot } from './types.ts';
+import type { Asset, AssetView, ChainId, NetworkId, Snapshot } from './types.ts';
 import { CHAIN_ORDER } from './types.ts';
 
 export type ClusterView = {
@@ -131,13 +131,19 @@ const SOLANA_MINTS: Record<string, { symbol: string; name: string }> = {
 
 export type HomeId = 'solana' | 'evm';
 
-export function homeChains(home: HomeId, snapshots: Snapshot[]): ChainGroup['clusters'] {
+export function displayNetwork(chain: ChainId, view: AssetView = 'mainnet'): NetworkId {
+  if (view === 'mainnet') return 'mainnet';
+  return chain === 'solana' ? 'devnet' : 'testnet';
+}
+
+export function homeChains(home: HomeId, snapshots: Snapshot[], view: AssetView = 'mainnet'): ChainGroup['clusters'] {
   const chains: ChainId[] = home === 'solana' ? ['solana'] : ['ethereum', 'base', 'bnb'];
   return chains.map((chain) => {
-    const snapshot = snapshots.find((item) => item.chain === chain && item.network === 'mainnet');
-    if (!snapshot) return absentMainnet(chain);
+    const network = displayNetwork(chain, view);
+    const snapshot = snapshots.find((item) => item.chain === chain && item.network === network);
+    if (!snapshot) return { chain, network, status: 'absent' as const, error: null, tokenListError: null, assets: [] };
     if (snapshot.status === 'error') {
-      return { chain, network: 'mainnet' as const, status: 'error' as const, error: snapshot.error, tokenListError: null, assets: [] };
+      return { chain, network: snapshot.network, status: 'error' as const, error: snapshot.error, tokenListError: null, assets: [] };
     }
     return viewFrom(chain, snapshot);
   });

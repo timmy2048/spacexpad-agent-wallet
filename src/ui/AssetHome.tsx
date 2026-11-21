@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { homeChains, type HomeId } from '../../shared/assets.ts';
+import type { AssetView } from '../../shared/types.ts';
 import { chainName, t } from '../../shared/i18n.ts';
 import { displayAmount, truncateAddress } from '../../shared/money.ts';
 import type { Asset, ChainId, Lang, Snapshot } from '../../shared/types.ts';
@@ -7,24 +8,24 @@ import { ChevronIcon, CopyIcon, TokenGlyph } from './icons.tsx';
 
 export function AssetHome({
   lang,
-  username,
   solana,
   evm,
   snapshots,
   pending,
   walletsReady,
   onRefresh,
+  view = 'mainnet',
   initialHome = 'solana',
   forceOpen = false,
 }: {
   lang: Lang;
-  username: string;
   solana: string | null;
   evm: string | null;
   snapshots: Snapshot[];
   pending: boolean;
   walletsReady: boolean;
   onRefresh: (() => void) | null;
+  view?: AssetView;
   initialHome?: HomeId;
   forceOpen?: boolean;
 }) {
@@ -59,14 +60,11 @@ export function AssetHome({
     }
   };
 
-  const chains = homeChains(home, snapshots);
+  const chains = homeChains(home, snapshots, view);
   const waiting = chains.some((chain) => chain.status === 'absent');
 
   return (
-    <section className="home" aria-labelledby="assets-title">
-      <h2 id="assets-title" className="who">
-        @{username || 'wallet'}
-      </h2>
+    <section className="home" aria-label={t(lang, 'assets')}>
       <div
         className="net"
         ref={rootRef}

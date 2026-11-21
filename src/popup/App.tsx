@@ -256,7 +256,7 @@ function Console({ store, logout }: { store: Store; logout: () => void }) {
 
   return (
     <main className="shell">
-      <BrandHeader lang={lang} />
+      <AccountHeader lang={lang} username={store.username} />
       {store.policy.agentsPaused ? (
         <Banner>
           <p>{t(lang, 'paused')}</p>
@@ -281,7 +281,7 @@ function Console({ store, logout }: { store: Store; logout: () => void }) {
         {tab === 'wallet' ? (
           <AssetHome
             lang={lang}
-            username={store.username}
+            view={store.assetView}
             solana={store.addresses?.solana ?? null}
             evm={store.addresses?.evm ?? null}
             snapshots={store.snapshots}
@@ -309,6 +309,18 @@ function BrandHeader({ lang }: { lang: Lang }) {
     <header className="top">
       <img src={brandIcon(32)} alt="" />
       <h1 className="brand">{t(lang, 'mark')}</h1>
+    </header>
+  );
+}
+
+function AccountHeader({ lang, username }: { lang: Lang; username: string }) {
+  return (
+    <header className="account-head">
+      <div className="top">
+        <img src={brandIcon(32)} alt="" />
+        <h1 className="brand">{t(lang, 'mark')}</h1>
+      </div>
+      <p className="account-name">@{username || 'wallet'}</p>
     </header>
   );
 }

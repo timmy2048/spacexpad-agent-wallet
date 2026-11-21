@@ -81,6 +81,22 @@ button:disabled { cursor: default; }
   letter-spacing: -0.02em;
 }
 
+.account-head {
+  padding: 10px 16px 0;
+}
+
+.account-head .top {
+  padding: 0;
+}
+
+.account-name {
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
 .body {
   flex: 1;
   overflow: auto;
@@ -97,7 +113,7 @@ button:disabled { cursor: default; }
   line-height: 1.1;
 }
 
-.net { position: relative; margin-top: 28px; }
+.net { position: relative; margin-top: 12px; }
 
 .net-row, .menu-row {
   display: grid;
@@ -300,14 +316,14 @@ textarea.prompt {
 .error { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
 .pad { padding: 16px; }
 
-.panel { padding-top: 8px; }
+.panel { padding-top: 0; }
 .panel h2, .gate h2 {
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.03em;
 }
-.panel h2:first-child { margin-top: 8px; }
+.panel h2:first-child { margin-top: 12px; }
 
 .choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .choices button {
@@ -335,10 +351,8 @@ textarea.prompt {
   font-size: 14px;
 }
 
-.settings-id { margin-bottom: 4px; }
-
 .settings-group {
-  margin-top: 28px;
+  margin-top: 12px;
   background: var(--panel);
   border-radius: 16px;
   overflow: hidden;
@@ -359,6 +373,20 @@ textarea.prompt {
 }
 
 .settings-row:first-child { border-top: 0; }
+
+.row-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.row-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--mute);
+}
 
 .row-chev { color: var(--mute); font-size: 18px; line-height: 1; }
 

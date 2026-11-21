@@ -109,10 +109,13 @@ export type ApprovalDecision = {
   allow: boolean;
 };
 
+export type AssetView = 'mainnet' | 'test';
+
 export type Store = {
   version: 1;
   language: Lang;
   username: string;
+  assetView: AssetView;
   auth: { userId: string; email: string } | null;
   addresses: { solana: string | null; evm: string | null } | null;
   policy: RiskPolicy;

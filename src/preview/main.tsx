@@ -94,7 +94,9 @@ const label = document.getElementById('label');
 if (label) label.textContent = labels[state] ?? `Fixture: ${state}`;
 
 function Preview() {
-  const [tab, setTab] = useState<'wallet' | 'agent' | 'settings'>(state === 'settings' ? 'settings' : 'wallet');
+  const [tab, setTab] = useState<'wallet' | 'agent' | 'settings'>(
+    state === 'settings' ? 'settings' : state === 'agent' ? 'agent' : 'wallet',
+  );
   if (state === 'login') {
     return (
       <LoginScreen
@@ -138,9 +140,12 @@ function Preview() {
   const snapshots = state === 'loading' ? [] : state === 'error' ? errored : ready;
   return (
     <main className="shell">
-      <header className="top">
-        <img src={brandIcon(32)} alt="" />
-        <h1 className="brand">{t(lang, 'mark')}</h1>
+      <header className="account-head">
+        <div className="top">
+          <img src={brandIcon(32)} alt="" />
+          <h1 className="brand">{t(lang, 'mark')}</h1>
+        </div>
+        <p className="account-name">@timmy</p>
       </header>
       {state === 'approval' ? (
         <div className="banner">
@@ -159,7 +164,6 @@ function Preview() {
         {tab === 'wallet' ? (
           <AssetHome
             lang={lang}
-            username="timmy"
             solana={state === 'loading' ? null : solana}
             evm={state === 'loading' ? null : evm}
             snapshots={snapshots}
@@ -192,7 +196,14 @@ function SettingsPreview({ lang: language }: { lang: Lang }) {
     username: 'timmy',
     agents: [{ id: '1', name: 'timmy-agent', token: 'spx_bind_aa', boundAt: 1 }],
   };
-  return <SettingsPanel store={store} logout={() => undefined} />;
+  const page = new URLSearchParams(location.search).get('page');
+  return (
+    <SettingsPanel
+      store={store}
+      logout={() => undefined}
+      initialPage={page === 'network' ? 'network' : 'home'}
+    />
+  );
 }
 
 createRoot(document.getElementById('root') as HTMLElement).render(<Preview />);

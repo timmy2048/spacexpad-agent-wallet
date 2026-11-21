@@ -120,6 +120,50 @@ export function CopyIcon() {
   );
 }
 
+export type SettingsIconName = 'user' | 'language' | 'risk' | 'list' | 'activity' | 'network';
+
+export function SettingsGlyph({ name }: { name: SettingsIconName }) {
+  return (
+    <svg className="row-icon" viewBox="0 0 16 16" aria-hidden="true">
+      {name === 'user' ? (
+        <>
+          <circle cx="8" cy="5.2" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M3.4 13.2c.7-2.2 2.2-3.2 4.6-3.2s3.9 1 4.6 3.2" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </>
+      ) : null}
+      {name === 'language' ? (
+        <>
+          <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M8 2.8c1.5 1.6 2.2 3.3 2.2 5.2S9.5 11.6 8 13.2C6.5 11.6 5.8 9.9 5.8 8S6.5 4.4 8 2.8zM2.9 8h10.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+        </>
+      ) : null}
+      {name === 'risk' ? (
+        <path d="M8 2.4 13 4.4v3.8c0 2.7-1.9 4.6-5 5.6-3.1-1-5-2.9-5-5.6V4.4z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      ) : null}
+      {name === 'list' ? (
+        <>
+          <path d="M6.2 4.2h6.4M6.2 8h6.4M6.2 11.8h4.2" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M3.1 4.2h.1M3.1 8h.1M3.1 11.8h.1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      ) : null}
+      {name === 'activity' ? (
+        <>
+          <circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M8 5.1V8.2l2.2 1.4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : null}
+      {name === 'network' ? (
+        <>
+          <circle cx="4.2" cy="8" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="11.8" cy="4.5" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <circle cx="11.8" cy="11.5" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M5.6 7.3 10.3 5.2M5.6 8.7l4.7 2.1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+        </>
+      ) : null}
+    </svg>
+  );
+}
+
 export function ChevronIcon({ up }: { up: boolean }) {
   return (
     <svg className={up ? 'mini chev up' : 'mini chev'} viewBox="0 0 16 16" aria-hidden="true">
