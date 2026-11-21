@@ -233,6 +233,7 @@ function BindGate({ store, logout }: { store: Store; logout: () => void }) {
           token={pairing.token}
           copied={pairing.copied}
           error={pairing.error}
+          notice={pairing.notice}
           fallback={pairing.fallback}
           onToken={pairing.setToken}
           onCopy={() => void pairing.copyPrompt()}
@@ -360,34 +361,34 @@ function DockButton({
 function usePairing(store: Store) {
   const lang = store.language;
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [token, setToken] = useState('');
   const [copied, setCopied] = useState(false);
   const [fallback, setFallback] = useState<string | null>(null);
 
   const copyPrompt = async () => {
+    setError(null);
     let pairCode: string | null = null;
-    let registered = false;
-    let status: string | null = null;
+    let serverDown = false;
     const settings = await ensureBridgeToken(store.settings);
     if (!settings.bridgeToken) {
-      status = t(lang, 'bridgeDown');
+      serverDown = true;
     } else {
       const code = createPairCode();
-      pairCode = code;
       const expiresAt = Date.now() + 10 * 60 * 1000;
-      await updateStore((current) => ({ ...current, pair: { code, expiresAt } }));
       try {
         await bridgePost(settings, '/v1/pair/register', { pairCode: code, expiresAt });
-        registered = true;
-      } catch (reason) {
-        status = reason instanceof Error ? reason.message : t(lang, 'bridgeDown');
+        pairCode = code;
+        await updateStore((current) => ({ ...current, pair: { code, expiresAt } }));
+      } catch {
+        serverDown = true;
       }
     }
-    const note = buildInstallNote(pairCode, registered);
+    const note = buildInstallNote(pairCode);
     const wrote = await copyText(note);
     setCopied(wrote);
     setFallback(wrote ? null : note);
-    setError(status);
+    setNotice(serverDown ? `${t(lang, 'bridgeDown')} ${t(lang, 'copyAgain')}` : null);
   };
 
   const bind = async () => {
@@ -426,7 +427,7 @@ function usePairing(store: Store) {
     }
   };
 
-  return { error, token, setToken, copied, fallback, copyPrompt, bind };
+  return { error, notice, token, setToken, copied, fallback, copyPrompt, bind };
 }
 
 function AgentPanel({ store }: { store: Store }) {
@@ -454,6 +455,7 @@ function AgentPanel({ store }: { store: Store }) {
       <button type="button" className="primary" onClick={() => void pairing.copyPrompt()}>
         {pairing.copied ? t(lang, 'promptCopied') : t(lang, 'copyPrompt')}
       </button>
+      {pairing.notice ? <p className="note">{pairing.notice}</p> : null}
       {pairing.fallback ? (
         <>
           <p className="error" role="alert">

@@ -7,6 +7,7 @@ export function BindScreen({
   token,
   copied,
   error,
+  notice = null,
   fallback = null,
   onToken,
   onCopy,
@@ -18,6 +19,7 @@ export function BindScreen({
   token: string;
   copied: boolean;
   error: string | null;
+  notice?: string | null;
   fallback?: string | null;
   onToken: (value: string) => void;
   onCopy: () => void;
@@ -33,6 +35,7 @@ export function BindScreen({
       <button type="button" className="primary" onClick={onCopy}>
         {copied ? t(lang, 'promptCopied') : t(lang, 'copyPrompt')}
       </button>
+      {notice ? <p className="note">{notice}</p> : null}
       {fallback ? (
         <>
           <p className="error" role="alert">

@@ -219,34 +219,26 @@ describe('embedded wallets', () => {
 });
 
 describe('prompt and copy', () => {
-  it('gives the agent a short note that points at the wallet skill', () => {
+  it('gives the agent one sentence plus a registered pair code', () => {
     const prompt = buildPairPrompt('ABCD2345');
+    assert.equal(prompt.split('\n')[0], 'Read https://spacexpad.xyz/agent-wallet/skill.md and set up this SpaceXpad agent wallet.');
     assert.match(prompt, /PAIR_CODE: ABCD2345/);
-    assert.match(prompt, /spacexpad_pair/);
-    assert.match(prompt, /omit network to use mainnet/i);
-    assert.match(prompt, /https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md/);
+    assert.match(prompt, /10 minutes/);
     assert.doesNotMatch(prompt, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
-    assert.match(prompt, /do not ask the user to paste a bridge token into settings/i);
-    assert.doesNotMatch(prompt, /https?:\/\/(?!(127\.0\.0\.1|spacexpad\.xyz))/);
-    assert.equal(prompt.split('\n').length < 20, true);
-    assert.equal(prompt.includes('尚未读取'), false);
+    assert.doesNotMatch(prompt, /npm install/);
+    assert.doesNotMatch(prompt, /mcp\/src\/index\.ts/);
+    assert.doesNotMatch(prompt, /omit network/i);
+    assert.doesNotMatch(prompt, /bridge token/i);
+    assert.doesNotMatch(prompt, /launchpad/i);
+    assert.doesNotMatch(prompt, /spacexpad_pair/);
+    assert.equal(prompt.split('\n').length <= 4, true);
     assert.equal(MCP_TOOL_NAMES.includes('spacexpad_pair'), true);
-    assert.match(prompt, /npm install/);
-    assert.match(prompt, /node --experimental-strip-types mcp\/src\/index.ts/);
   });
 
-  it('copies an install note with no pair code when the local server is down', () => {
+  it('omits the pair code when the local server is down', () => {
     const note = buildInstallNote(null);
-    assert.match(note, /https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md/);
-    assert.match(note, /npm install/);
-    assert.match(note, /node --experimental-strip-types mcp\/src\/index.ts/);
-    assert.match(note, /127\.0\.0\.1:47321/);
-    assert.match(note, /do not ask the user to paste a bridge token into settings/i);
-    assert.doesNotMatch(note, /^PAIR_CODE:/m);
-    assert.doesNotMatch(note, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
-    const unregistered = buildInstallNote('ABCD2345', false);
-    assert.match(unregistered, /PAIR_CODE: ABCD2345/);
-    assert.match(unregistered, /copy the install note again/i);
+    assert.equal(note, 'Read https://spacexpad.xyz/agent-wallet/skill.md and set up this SpaceXpad agent wallet.');
+    assert.doesNotMatch(note, /PAIR_CODE/);
   });
 
   it('keeps the wallet closed until an agent is bound', () => {
