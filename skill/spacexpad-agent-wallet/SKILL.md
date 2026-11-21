@@ -7,7 +7,7 @@ description: Use the SpaceXpad agent wallet through its local MCP server. Pair w
 
 The wallet is a Chrome extension for the launchpad at [https://spacexpad.xyz/](https://spacexpad.xyz/). Privy holds the keys. This skill talks to the local MCP server `spacexpad-agent-wallet`, which forwards each call to the extension over `http://127.0.0.1:47321`. The reserved public document is `https://spacexpad.xyz/agent-wallet/skill.md` and it is not published. The review copy in this repo is `docs/agent-wallet/skill.md`. Do not use the launchpad's `/skill`, `/skill.md`, or `/agents` pages for this extension. There is no hosted wallet endpoint.
 
-The extension enforces the user's risk policy and kill switch. A testnet or devnet signature or send also waits for a confirmation in the extension popup. Nothing is signed until that confirmation. Mainnet does not ask that extra question.
+The extension enforces the user's risk policy and kill switch. A testnet or devnet transaction signature or send waits for confirmation in the extension popup. A mainnet transaction does not ask that extra question. Message signing always asks, including on mainnet.
 
 ## Install and run
 
@@ -33,7 +33,7 @@ node --experimental-strip-types mcp/src/index.ts
 }
 ```
 
-The process prints a bridge token on stderr and writes `~/.spacexpad-agent-wallet/bridge.json`. The user pastes that token into the extension. Do not put the token in chat. The bridge accepts loopback clients only, and every route except the health check requires the bearer token.
+The process prints a bridge token on stderr and writes `~/.spacexpad-agent-wallet/bridge.json`. The extension adopts that token from the local server on its own. Do not ask the user to paste a bridge token into Settings, and do not put the token in chat. The bridge accepts loopback clients only. `GET /v1/health` and `GET /v1/bootstrap` do not require the bearer token. Every other route does.
 
 Discover tools from the running server. It registers only:
 
@@ -42,15 +42,16 @@ Discover tools from the running server. It registers only:
 - `spacexpad_get_balance`
 - `spacexpad_sign_transaction`
 - `spacexpad_send_transaction`
+- `spacexpad_sign_message`
 
 ## Pair first
 
 1. The user copies a prompt from the extension. It contains `PAIR_CODE:`.
 2. Call `spacexpad_pair` with that code and your agent name.
-3. Show the returned `spx_bind_...` token to the user and wait until they paste it into the extension.
+3. Show the returned `spx_bind_...` token to the user and wait until they paste it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
-The code expires about 10 minutes after it was copied. The user can remove a binding in the extension.
+The code expires about 30 minutes after it was copied. The user can remove a binding in the extension.
 
 ## Mainnet unless the user names a test network
 
@@ -66,6 +67,7 @@ Solana test traffic is `devnet`, not `testnet`. Ethereum and Base `testnet` mean
 - `spacexpad_get_balance` — native balance plus other fungible tokens. A zero native balance is a real read. If `tokenListError` is set, say that the token list failed instead of claiming the wallet holds only the native asset.
 - `spacexpad_sign_transaction` — sign only. Return the signed transaction. Do not tell the user it was sent.
 - `spacexpad_send_transaction` — sign and submit. Report a hash only if the tool result includes one. Status `submitted` means the RPC accepted it, not that it is confirmed.
+- `spacexpad_sign_message` — Ed25519-sign arbitrary bytes with the bound Solana wallet. `chain` must be `solana`. Omit `network` for mainnet; Solana test traffic is `devnet`. `encoding` defaults to `utf8` and signs those exact bytes with no prefix. `signature` in the result is base64, which is the `signature` field for `POST https://spacexpad.xyz/api/agent/verify` together with `wallet` set to `publicKey`. `signatureBase58` is the same bytes. The popup shows the message and requires Confirm on mainnet and devnet. Do not substitute a transaction signature.
 
 `kind` is `native_transfer` (`to` + human `amount`) or `serialized` (hex or base64 transaction).
 

@@ -75,6 +75,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     send(res, 200, { ok: true });
     return;
   }
+  if (req.method === 'GET' && url === '/v1/bootstrap') {
+    send(res, 200, { token: state.token });
+    return;
+  }
   if (!authorized(req)) {
     send(res, 401, { error: 'Bridge token was rejected.' });
     return;
@@ -180,16 +184,17 @@ async function main(): Promise<void> {
     'spacexpad_pair',
     {
       description:
-        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user must paste into the extension. Later calls use mainnet unless testnet or devnet is explicit.',
+        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user pastes into the extension bind screen. Do not ask them to paste a bridge token into Settings. Later calls use mainnet unless testnet or devnet is explicit.',
       inputSchema: { pairCode: z.string(), agentName: z.string() },
     },
     async ({ pairCode, agentName }) => {
       try {
-        const issued = bridge.issue(pairCode, agentName);
+        const issued = await bridge.issueWhenRegistered(pairCode, agentName);
         await saveDisk();
         return toolText({
           ...issued,
-          message: 'Show this binding token to the user and ask them to paste it into SpaceXpad. Do not call other wallet tools until they have bound it.',
+          message:
+            'Show this binding token to the user and ask them to paste it into the SpaceXpad bind screen. Do not ask them to paste a bridge token into Settings. Do not call other wallet tools until the bind succeeds.',
         });
       } catch (error) {
         return toolText(error instanceof Error ? error.message : 'Pairing failed.', true);
@@ -247,6 +252,42 @@ async function main(): Promise<void> {
       inputSchema: txShape,
     },
     async (args) => answerTx('sign', args),
+  );
+  mcp.registerTool(
+    'spacexpad_sign_message',
+    {
+      description:
+        'Ask the wallet to sign an arbitrary message with the bound Solana wallet. chain must be solana. network defaults to mainnet; Solana test traffic is devnet, and solana testnet is rejected. encoding defaults to utf8 and signs those exact UTF-8 bytes with no prefix. Pass hex or base64 only when the message is not text. Every message, including mainnet, waits for confirmation in the extension. The result signature is base64, which is what POST /api/agent/verify expects in the signature field. signatureBase58 is the same bytes. Do not claim a signature that is not in the result.',
+      inputSchema: {
+        bindToken: z.string(),
+        chain: chainSchema,
+        network: networkSchema,
+        message: z.string().describe('UTF-8 text by default. Hex or base64 only when encoding says so.'),
+        encoding: z
+          .enum(['utf8', 'hex', 'base64'])
+          .optional()
+          .describe('Omit or pass utf8 to sign the exact UTF-8 bytes. hex may include a 0x prefix. base64 is standard base64.'),
+      },
+    },
+    async ({ bindToken, chain, network, message, encoding }) => {
+      const denied = requireRedeemed(bindToken);
+      if (denied) return toolText(denied, true);
+      if (chain !== 'solana') return toolText('Message signing currently supports Solana only. Pass chain "solana".', true);
+      const invalid = networkOrError(chain, network);
+      if (invalid) return toolText(invalid, true);
+      const result = await bridge.request({
+        id: randomBytes(8).toString('hex'),
+        method: 'sign_message',
+        params: {
+          bindToken,
+          chain,
+          network: chosenNetwork(chain, network),
+          message,
+          encoding: encoding ?? 'utf8',
+        },
+      });
+      return toolText(result.ok ? result.result : result.error, !result.ok);
+    },
   );
   mcp.registerTool(
     'spacexpad_send_transaction',

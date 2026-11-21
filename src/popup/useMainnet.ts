@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { resolveCluster } from '../../shared/chains.ts';
+import { displayNetwork } from '../../shared/assets.ts';
+import { browserRpcUrl, resolveCluster } from '../../shared/chains.ts';
 import { CHAIN_ORDER, type ChainId, type Snapshot, type Store } from '../../shared/types.ts';
 import { readClusterBalance } from '../lib/balances.ts';
 import { updateStore } from '../lib/storage.ts';
@@ -10,7 +11,11 @@ export function useMainnetBalances(store: Store): { pending: boolean; refresh: (
   const [nonce, setNonce] = useState(0);
   const solana = store.addresses?.solana ?? '';
   const evm = store.addresses?.evm ?? '';
-  const rpcKey = CHAIN_ORDER.map((chain) => store.settings.rpc[`${chain}:mainnet`] ?? '').join('|');
+  const view = store.assetView ?? 'mainnet';
+  const rpcKey = CHAIN_ORDER.map((chain) => {
+    const network = displayNetwork(chain, view);
+    return store.settings.rpc[`${chain}:${network}`] ?? '';
+  }).join('|');
 
   useEffect(() => {
     if (!ready) {
@@ -20,7 +25,7 @@ export function useMainnetBalances(store: Store): { pending: boolean; refresh: (
     let cancel = false;
     const run = async () => {
       setPending(true);
-      const snaps = await Promise.all(CHAIN_ORDER.map(async (chain) => readOne(store, chain)));
+      const snaps = await Promise.all(CHAIN_ORDER.map(async (chain) => readOne(store, chain, view)));
       if (cancel) return;
       await updateStore((current) => {
         let next = current;
@@ -38,33 +43,34 @@ export function useMainnetBalances(store: Store): { pending: boolean; refresh: (
     return () => {
       cancel = true;
     };
-  }, [ready, solana, evm, rpcKey, nonce]);
+  }, [ready, solana, evm, rpcKey, nonce, view]);
 
   return { pending, refresh: () => setNonce((value) => value + 1) };
 }
 
-async function readOne(store: Store, chain: ChainId): Promise<Snapshot> {
-  const cluster = resolveCluster(chain, 'mainnet');
-  const rpcUrl = store.settings.rpc[cluster.rpcKey];
-  if (!rpcUrl) return failed(chain, `No RPC is configured for ${cluster.rpcKey}.`);
+async function readOne(store: Store, chain: ChainId, view: Store['assetView']): Promise<Snapshot> {
+  const network = displayNetwork(chain, view);
+  const cluster = resolveCluster(chain, network);
+  const rpcUrl = browserRpcUrl(chain, network, store.settings.rpc[cluster.rpcKey] ?? '');
+  if (!rpcUrl) return failed(chain, network, `No RPC is configured for ${cluster.rpcKey}.`);
   try {
     return await readClusterBalance({
       chain,
-      network: 'mainnet',
+      network,
       solanaAddress: store.addresses?.solana ?? null,
       evmAddress: store.addresses?.evm ?? null,
       rpcUrl,
       now: Date.now(),
     });
   } catch (error) {
-    return failed(chain, error instanceof Error ? error.message : 'Balance could not be loaded.');
+    return failed(chain, network, error instanceof Error ? error.message : 'Balance could not be loaded.');
   }
 }
 
-function failed(chain: ChainId, error: string): Snapshot {
+function failed(chain: ChainId, network: Snapshot['network'], error: string): Snapshot {
   return {
     chain,
-    network: 'mainnet',
+    network,
     status: 'error',
     error,
     tokenListError: null,

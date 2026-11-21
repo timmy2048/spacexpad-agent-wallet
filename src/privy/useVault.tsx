@@ -10,7 +10,7 @@ import {
   type ConnectedWallet,
   type User,
 } from '@privy-io/react-auth';
-import { useCreateWallet as useCreateSolanaWallet, useSignTransaction, useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useCreateWallet as useCreateSolanaWallet, useSignMessage, useSignTransaction, useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import { createPublicClient, createWalletClient, custom, http, type Hex } from 'viem';
 import { base, baseSepolia, bsc, bscTestnet, mainnet, sepolia } from 'viem/chains';
 import { resolveCluster } from '../../shared/chains.ts';
@@ -39,7 +39,7 @@ export function PrivyGate({
       clientId={clientId || undefined}
       config={{
         loginMethods: ['email', 'google'],
-        appearance: { theme: 'dark', accentColor: '#9fd7e4' },
+        appearance: { theme: 'dark', accentColor: '#38bdf8' },
         embeddedWallets: {
           showWalletUIs: false,
           // Dashboard "create on login" only runs for the Privy modal.
@@ -62,6 +62,7 @@ export function useVault() {
   const { createWallet } = useCreateWallet();
   const { createWallet: createSolana } = useCreateSolanaWallet();
   const { signTransaction } = useSignTransaction();
+  const { signMessage: signSolanaMessage } = useSignMessage();
   const emailLogin = useLoginWithEmail();
   const googleLogin = useLoginWithOAuth();
   const { logout } = useLogout();
@@ -146,6 +147,8 @@ export function useVault() {
   solanaRef.current = solana.wallets;
   const signSolRef = useRef(signTransaction);
   signSolRef.current = signTransaction;
+  const signMessageRef = useRef(signSolanaMessage);
+  signMessageRef.current = signSolanaMessage;
 
   const sign = async (params: TxParams, rpcUrl: string, method: 'sign' | 'send'): Promise<SignOutcome> => {
     if (params.chain === 'solana') {
@@ -168,7 +171,14 @@ export function useVault() {
     return signEvm(params, rpcUrl, method, walletsRef.current);
   };
 
-  return { ready, authenticated, user, emailLogin, googleLogin, logout, sign };
+  const signMessage = async (input: { message: Uint8Array }): Promise<{ signature: Uint8Array; publicKey: string }> => {
+    const wallet = solanaRef.current[0];
+    if (!wallet) throw new Error('No Solana wallet is available.');
+    const signed = await signMessageRef.current({ message: input.message, wallet });
+    return { signature: signed.signature, publicKey: wallet.address };
+  };
+
+  return { ready, authenticated, user, emailLogin, googleLogin, logout, sign, signMessage };
 }
 
 async function signEvm(

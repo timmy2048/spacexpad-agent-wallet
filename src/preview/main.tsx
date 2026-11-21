@@ -1,25 +1,26 @@
 import '../buffer-polyfill.ts';
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/jetbrains-mono/400.css';
+import '../fonts.ts';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { nativeAsset } from '../../shared/assets.ts';
 import { t } from '../../shared/i18n.ts';
-import type { Lang, Snapshot } from '../../shared/types.ts';
-import { AddressPopover } from '../ui/AddressPopover.tsx';
-import { AssetList } from '../ui/AssetList.tsx';
-import { NavIcon } from '../ui/icons.tsx';
+import type { Lang, Snapshot, Store } from '../../shared/types.ts';
+import { defaultStore } from '../../shared/store.ts';
+import { AssetHome } from '../ui/AssetHome.tsx';
+import { brandIcon } from '../ui/brand.ts';
+import { BindScreen } from '../ui/BindScreen.tsx';
+import { LoginScreen } from '../ui/LoginScreen.tsx';
+import { SettingsPanel } from '../ui/SettingsPanel.tsx';
 import '../popup/styles.css';
 
 document.documentElement.classList.add('preview');
 
 const params = new URLSearchParams(location.search);
 const state = params.get('state') ?? 'login';
-const lang = (params.get('lang') ?? 'en') as Lang;
+const lang = (params.get('lang') ?? 'zh-CN') as Lang;
 
-const solana = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-const evm = '0x1111111111111111111111111111111111111111';
+const solana = '9f2kRaaaaaaaaaaaaaaaaaaLm4uC';
+const evm = '0xA41c1111111111111111111111111111111192eB';
 
 function snap(chain: Snapshot['chain'], amount: bigint, extra: Snapshot['assets'] = []): Snapshot {
   return {
@@ -33,9 +34,20 @@ function snap(chain: Snapshot['chain'], amount: bigint, extra: Snapshot['assets'
   };
 }
 
+const usdc = {
+  symbol: 'USDC',
+  name: 'USD Coin',
+  amount: '0',
+  raw: '1',
+  decimals: 6,
+  contract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  native: false,
+  usd: null,
+};
+
 const ready: Snapshot[] = [
-  snap('solana', 1_500_000_000n),
-  snap('ethereum', 20_000_000_000_000_000n),
+  snap('solana', 0n, [usdc]),
+  snap('ethereum', 0n),
   snap('base', 0n, [
     {
       symbol: 'USDC',
@@ -67,45 +79,74 @@ const errored: Snapshot[] = [
 ];
 
 const labels: Record<string, string> = {
-  login: 'Fixture: signed-out login. No account data.',
-  loading: 'Fixture: mainnet read in progress. Amounts are not balances yet.',
-  wallet: 'Fixture: sample mainnet balances, not a live wallet. USDC has no invented USD price.',
-  popover: 'Fixture: sample addresses. Copy does not use a real account.',
-  error: 'Fixture: Ethereum mainnet RPC failed. That row is an error, not a zero balance.',
-  zero: 'Fixture: successful mainnet reads that returned zero.',
-  agent: 'Fixture: agent setup before any bridge token is saved.',
-  approval: 'Fixture: explicit Base Sepolia send waiting for confirmation. Nothing is signed.',
-  activity: 'Fixture: empty activity. No invented history.',
-  'activity-item': 'Fixture: one sample activity row, not a broadcast transaction.',
-  settings: 'Fixture: settings. Bridge token field is empty on purpose.',
-  paused: 'Fixture: agents paused. Sample balances.',
+  login: 'Fixture: signed-out login.',
+  wallet: 'Fixture: Solana home. Sample amounts, not a live wallet.',
+  picker: 'Fixture: network picker open. Solana and EVM only.',
+  evm: 'Fixture: EVM home. Ethereum, Base, and BNB share one address.',
+  error: 'Fixture: Ethereum read failed. That row is an error, not a zero balance.',
+  loading: 'Fixture: balances still loading. Amounts are hidden.',
+  bind: 'Fixture: first-run bind gate. Assets are not reachable.',
+  settings: 'Fixture: settings. No bridge token field.',
+  approval: 'Fixture: test-network send waiting for confirmation.',
 };
 
 const label = document.getElementById('label');
 if (label) label.textContent = labels[state] ?? `Fixture: ${state}`;
 
 function Preview() {
-  const [tab, setTab] = useState<'wallet' | 'agent' | 'activity' | 'settings'>(
-    state === 'agent' || state === 'approval' ? 'agent' : state === 'activity' || state === 'activity-item' ? 'activity' : state === 'settings' ? 'settings' : 'wallet',
+  const [tab, setTab] = useState<'wallet' | 'agent' | 'settings'>(
+    state === 'settings' ? 'settings' : state === 'agent' ? 'agent' : 'wallet',
   );
-  if (state === 'login') return <LoginPreview />;
+  if (state === 'login') {
+    return (
+      <LoginScreen
+        lang={lang}
+        email=""
+        code=""
+        phase="idle"
+        notice={null}
+        error={null}
+        onEmail={() => undefined}
+        onCode={() => undefined}
+        onSend={() => undefined}
+        onConfirm={() => undefined}
+        onGoogle={() => undefined}
+      />
+    );
+  }
+  if (state === 'bind') {
+    return (
+      <main className="shell">
+        <header className="top">
+          <img src={brandIcon(32)} alt="" />
+          <h1 className="brand">{t(lang, 'mark')}</h1>
+        </header>
+        <div className="body">
+          <BindScreen
+            lang={lang}
+            token=""
+            copied={false}
+            error={null}
+            onToken={() => undefined}
+            onCopy={() => undefined}
+            onBind={() => undefined}
+            onLanguage={() => undefined}
+            onLogout={() => undefined}
+          />
+        </div>
+      </main>
+    );
+  }
+  const snapshots = state === 'loading' ? [] : state === 'error' ? errored : ready;
   return (
     <main className="shell">
-      <header className="top">
-        <img src="/icons/icon-32.png" alt="" />
-        <div>
+      <header className="account-head">
+        <div className="top">
+          <img src={brandIcon(32)} alt="" />
           <h1 className="brand">{t(lang, 'mark')}</h1>
-          <p className="cluster-label">{t(lang, 'mainnet')}</p>
         </div>
+        <p className="account-name">@timmy</p>
       </header>
-      {state === 'paused' ? (
-        <div className="banner">
-          <p>{t(lang, 'paused')}</p>
-          <button type="button" className="quiet-button">
-            {t(lang, 'resume')}
-          </button>
-        </div>
-      ) : null}
       {state === 'approval' ? (
         <div className="banner">
           <p>Claude asked to send on Base Sepolia. This is a test network. Nothing is signed until you confirm.</p>
@@ -121,149 +162,47 @@ function Preview() {
       ) : null}
       <div className="body">
         {tab === 'wallet' ? (
-          <>
-            <AddressPopover
-              lang={lang}
-              username="ada"
-              solana={state === 'loading' ? null : solana}
-              evm={state === 'loading' ? null : evm}
-              forceOpen={state === 'popover'}
-            />
-            <AssetList
-              lang={lang}
-              snapshots={snapshotsFor(state)}
-              pending={state === 'loading'}
-              walletsReady={state !== 'loading'}
-              onRefresh={() => undefined}
-            />
-          </>
+          <AssetHome
+            lang={lang}
+            solana={state === 'loading' ? null : solana}
+            evm={state === 'loading' ? null : evm}
+            snapshots={snapshots}
+            pending={state === 'loading'}
+            walletsReady={state !== 'loading'}
+            onRefresh={() => undefined}
+            initialHome={state === 'evm' || state === 'error' ? 'evm' : 'solana'}
+            forceOpen={state === 'picker'}
+          />
         ) : null}
-        {tab === 'agent' ? <AgentPreview lang={lang} connected={false} /> : null}
-        {tab === 'activity' ? <ActivityPreview lang={lang} item={state === 'activity-item'} /> : null}
         {tab === 'settings' ? <SettingsPreview lang={lang} /> : null}
       </div>
-      <nav className="nav" aria-label={t(lang, 'primaryNav')}>
-        {(['wallet', 'agent', 'activity', 'settings'] as const).map((id) => (
-          <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
-            <NavIcon name={id} />
-            {t(lang, id === 'wallet' ? 'navWallet' : id === 'agent' ? 'navAgent' : id === 'activity' ? 'navActivity' : 'navSettings')}
-          </button>
-        ))}
+      <nav className="dock" aria-label={t(lang, 'primaryNav')}>
+        <div className="dock-pill">
+          {(['wallet', 'agent', 'settings'] as const).map((id) => (
+            <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
+              {t(lang, id === 'wallet' ? 'navWallet' : id === 'agent' ? 'navAgent' : 'navSettings')}
+            </button>
+          ))}
+        </div>
       </nav>
     </main>
   );
 }
 
-function snapshotsFor(name: string): Snapshot[] {
-  if (name === 'loading') return [];
-  if (name === 'error') return errored;
-  if (name === 'zero') return [snap('solana', 0n), snap('ethereum', 0n), snap('base', 0n), snap('bnb', 0n)];
-  if (name === 'wallet' || name === 'popover' || name === 'paused' || name === 'activity-item') return ready;
-  return ready;
-}
-
-function LoginPreview() {
-  return (
-    <main className="shell">
-      <div className="login">
-        <img src="/icons/icon-48.png" alt="" />
-        <h1>{t(lang, 'appName')}</h1>
-        <p className="note">{t(lang, 'loginNote')}</p>
-        <button type="button" className="primary">
-          {t(lang, 'continueGmail')}
-        </button>
-        <label className="field" htmlFor="email">
-          <span>{t(lang, 'email')}</span>
-          <input id="email" type="email" autoComplete="email" defaultValue="" />
-        </label>
-        <button type="button" className="secondary" disabled>
-          {t(lang, 'sendCode')}
-        </button>
-      </div>
-    </main>
-  );
-}
-
-function AgentPreview({ lang: language, connected }: { lang: Lang; connected: boolean }) {
-  return (
-    <section className="panel">
-      <h2>{t(language, 'bindTitle')}</h2>
-      <p className="note">{connected ? t(language, 'bridgeConnected') : t(language, 'bridgeMissing')}</p>
-      <p className="note">{t(language, 'bindIntro')}</p>
-      <button type="button" className="primary">
-        {t(language, 'copyPrompt')}
-      </button>
-      <label className="field" htmlFor="token">
-        <span>{t(language, 'tokenLabel')}</span>
-        <input id="token" autoComplete="off" defaultValue="" />
-      </label>
-      <button type="button" className="secondary">
-        {t(language, 'bindAction')}
-      </button>
-      <h2>{t(language, 'agents')}</h2>
-      <p className="note">{t(language, 'noAgents')}</p>
-    </section>
-  );
-}
-
-function ActivityPreview({ lang: language, item }: { lang: Lang; item: boolean }) {
-  return (
-    <section className="panel">
-      <h2>{t(language, 'activity')}</h2>
-      {item ? (
-        <ul className="activity-list" role="list">
-          <li role="listitem">
-            <span>Balance · Ethereum Mainnet</span>
-            <p className="note">Balance read.</p>
-          </li>
-        </ul>
-      ) : (
-        <p className="note">{t(language, 'noActivity')}</p>
-      )}
-    </section>
-  );
-}
-
 function SettingsPreview({ lang: language }: { lang: Lang }) {
+  const store: Store = {
+    ...defaultStore(),
+    language,
+    username: 'timmy',
+    agents: [{ id: '1', name: 'timmy-agent', token: 'spx_bind_aa', boundAt: 1 }],
+  };
+  const page = new URLSearchParams(location.search).get('page');
   return (
-    <section className="panel">
-      <h2>{t(language, 'settings')}</h2>
-      <p className="label">{t(language, 'language')}</p>
-      <div className="choices">
-        <button type="button" aria-pressed={language === 'zh-CN'}>
-          简体中文
-        </button>
-        <button type="button" aria-pressed={language === 'zh-TW'}>
-          繁體中文
-        </button>
-        <button type="button" aria-pressed={language === 'en'}>
-          English
-        </button>
-      </div>
-      <label className="field" htmlFor="name">
-        <span>{t(language, 'username')}</span>
-        <input id="name" defaultValue="ada" aria-describedby="hint" />
-      </label>
-      <p className="note" id="hint">
-        {t(language, 'usernameHint')}
-      </p>
-      <h2>{t(language, 'risk')}</h2>
-      <div className="choices">
-        <button type="button" aria-pressed="true">
-          {t(language, 'fullAccess')}
-        </button>
-        <button type="button" aria-pressed="false">
-          {t(language, 'useLimits')}
-        </button>
-      </div>
-      <p className="note">{t(language, 'fullAccessHelp')}</p>
-      <h2>{t(language, 'bridge')}</h2>
-      <p className="note">{t(language, 'bridgeDisconnected')}</p>
-      <label className="field" htmlFor="bridge">
-        <span>{t(language, 'bridgeToken')}</span>
-        <input id="bridge" type="password" defaultValue="" autoComplete="off" />
-      </label>
-    </section>
+    <SettingsPanel
+      store={store}
+      logout={() => undefined}
+      initialPage={page === 'network' ? 'network' : 'home'}
+    />
   );
 }
 

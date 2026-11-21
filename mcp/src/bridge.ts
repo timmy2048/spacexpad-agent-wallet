@@ -36,6 +36,19 @@ export function createBridge() {
     pairs.set(code, { code, expiresAt });
   }
 
+  async function issueWhenRegistered(
+    code: string,
+    agentName: string,
+    waitMs = 8000,
+  ): Promise<{ bindToken: string; agentId: string; agentName: string }> {
+    const deadline = Date.now() + waitMs;
+    while (!pairs.has(code)) {
+      if (Date.now() >= deadline) break;
+      await sleep(150);
+    }
+    return issue(code, agentName);
+  }
+
   function issue(code: string, agentName: string): { bindToken: string; agentId: string; agentName: string } {
     const pair = pairs.get(code);
     if (!pair || pair.expiresAt < Date.now()) throw new Error('That pairing code is unknown or expired.');
@@ -77,11 +90,11 @@ export function createBridge() {
       return {
         ok: false,
         error:
-          'SpaceXpad extension is not connected. Open Chrome with the extension loaded and the same bridge token.',
+          'SpaceXpad extension is not connected. Open Chrome with the extension loaded and signed in. The extension connects to this local bridge on its own.',
       };
     }
     if (inbound.method !== 'get_addresses' && !isRedeemed(inbound.params.bindToken)) {
-      return { ok: false, error: 'This binding token is not recognized. Paste it into SpaceXpad first.' };
+      return { ok: false, error: 'This binding token is not recognized. Paste it into the SpaceXpad bind screen first.' };
     }
     let resolveJob: (result: AgentResult) => void = () => undefined;
     const promise = new Promise<AgentResult>((resolve) => {
@@ -159,6 +172,7 @@ export function createBridge() {
     connected,
     registerPair,
     issue,
+    issueWhenRegistered,
     redeem,
     unbind,
     isRedeemed,
@@ -172,6 +186,12 @@ export function createBridge() {
 }
 
 export type Bridge = ReturnType<typeof createBridge>;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function timedOut(job: Job): Promise<AgentResult> {
   return new Promise((resolve) => {

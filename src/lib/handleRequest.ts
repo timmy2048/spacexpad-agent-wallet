@@ -1,8 +1,17 @@
-import { resolveCluster } from '../../shared/chains.ts';
+import { browserRpcUrl, resolveCluster } from '../../shared/chains.ts';
 import { policyText } from '../../shared/i18n.ts';
+import {
+  assertMessageChain,
+  messageBytes,
+  messagePreview,
+  publicKeyBytes,
+  signatureBase58,
+  signatureBase64,
+  verifyEd25519,
+} from '../../shared/message.ts';
 import { utcDate } from '../../shared/money.ts';
 import { evaluatePolicy } from '../../shared/policy.ts';
-import type { Activity, AgentResult, Inbound, PendingApproval, Snapshot, Store, TxParams } from '../../shared/types.ts';
+import type { Activity, AgentResult, Inbound, NetworkId, PendingApproval, Snapshot, Store, TxParams } from '../../shared/types.ts';
 import { readClusterBalance } from './balances.ts';
 import { quoteTransaction, type Quote } from './quote.ts';
 
@@ -12,6 +21,7 @@ export type HandlerDeps = {
   load: () => Promise<Store>;
   update: (patch: (store: Store) => Store) => Promise<Store>;
   sign: (params: TxParams, rpcUrl: string, method: 'sign' | 'send') => Promise<SignOutcome>;
+  signMessage?: (input: { message: Uint8Array }) => Promise<{ signature: Uint8Array; publicKey: string }>;
   confirm: (id: string) => Promise<boolean>;
   approveNonMainnet?: (pending: PendingApproval) => Promise<boolean>;
   readBalance?: typeof readClusterBalance;
@@ -24,11 +34,12 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
     const store = await deps.load();
     const agent = store.agents.find((item) => item.token === inbound.params.bindToken);
     if (!agent) {
-      return { ok: false, error: 'This binding token is not recognized. Paste it into SpaceXpad first.' };
+      return { ok: false, error: 'This binding token is not recognized. Paste it into the SpaceXpad bind screen first.' };
     }
     if (inbound.method === 'get_addresses') return addresses(store);
+    if (inbound.method === 'sign_message') return await signMessageRequest(deps, inbound, store, agent.name);
     const cluster = resolveCluster(inbound.params.chain, inbound.params.network);
-    const rpcUrl = store.settings.rpc[cluster.rpcKey];
+    const rpcUrl = browserRpcUrl(cluster.chain, cluster.network, store.settings.rpc[cluster.rpcKey] ?? '');
     if (!rpcUrl) return { ok: false, error: `No RPC is configured for ${cluster.rpcKey}.` };
 
     if (inbound.method === 'get_balance') {
@@ -221,6 +232,89 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : 'Request failed.' };
   }
+}
+
+async function signMessageRequest(
+  deps: HandlerDeps,
+  inbound: Extract<Inbound, { method: 'sign_message' }>,
+  store: Store,
+  agentName: string,
+): Promise<AgentResult> {
+  assertMessageChain(inbound.params.chain);
+  const cluster = resolveCluster('solana', inbound.params.network);
+  const encoding = inbound.params.encoding ?? 'utf8';
+  const bytes = messageBytes(inbound.params.message, encoding);
+  const preview = messagePreview(bytes, inbound.params.message, encoding);
+  if (store.policy.agentsPaused) {
+    const detail = policyText('en', { code: 'paused' });
+    await recordMessage(deps, agentName, cluster.network, 'blocked', detail);
+    return { ok: false, error: detail, code: 'paused' };
+  }
+  const address = store.addresses?.solana;
+  if (!address) return { ok: false, error: 'Wallets are not ready yet.' };
+  const pending: PendingApproval = {
+    id: inbound.id,
+    method: 'sign_message',
+    chain: cluster.chain,
+    network: cluster.network,
+    agentName,
+    expiresAt: deps.now() + 60_000,
+    message: preview,
+  };
+  const allowed = deps.approveNonMainnet ? await deps.approveNonMainnet(pending) : false;
+  if (!allowed) {
+    const detail = 'This message was not confirmed. Nothing was signed.';
+    await recordMessage(deps, agentName, cluster.network, 'blocked', detail);
+    return { ok: false, error: detail };
+  }
+  if (!deps.signMessage) return { ok: false, error: 'Message signing is not available.' };
+  let signed: { signature: Uint8Array; publicKey: string };
+  try {
+    signed = await deps.signMessage({ message: bytes });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Signing failed.';
+    await recordMessage(deps, agentName, cluster.network, 'error', detail);
+    return { ok: false, error: detail };
+  }
+  const key = publicKeyBytes(signed.publicKey);
+  if (!verifyEd25519(bytes, signed.signature, key)) {
+    const detail = 'The signature does not verify over the original message bytes.';
+    await recordMessage(deps, agentName, cluster.network, 'error', detail);
+    return { ok: false, error: detail };
+  }
+  await recordMessage(deps, agentName, cluster.network, 'ok', 'Message signed');
+  return {
+    ok: true,
+    result: {
+      chain: 'solana',
+      network: cluster.network,
+      publicKey: signed.publicKey,
+      signature: signatureBase64(signed.signature),
+      signatureEncoding: 'base64',
+      signatureBase58: signatureBase58(signed.signature),
+      messageEncoding: encoding,
+    },
+  };
+}
+
+async function recordMessage(
+  deps: HandlerDeps,
+  agentName: string,
+  network: NetworkId,
+  status: 'ok' | 'blocked' | 'error',
+  detail: string,
+): Promise<void> {
+  await deps.update((current) =>
+    withActivity(current, {
+      at: deps.now(),
+      agentName,
+      method: 'sign_message',
+      chain: 'solana',
+      network,
+      status,
+      detail,
+    }),
+  );
 }
 
 function addresses(store: Store): AgentResult {

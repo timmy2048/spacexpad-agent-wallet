@@ -34,6 +34,10 @@ describe('local MCP client', { timeout: 40_000 }, () => {
 
       const health = await fetch(`http://127.0.0.1:${port}/v1/health`);
       assert.equal(health.status, 200);
+      const bootstrap = await fetch(`http://127.0.0.1:${port}/v1/bootstrap`);
+      assert.equal(bootstrap.status, 200);
+      const bootJson = (await bootstrap.json()) as { token?: string };
+      assert.equal(bootJson.token, TOKEN);
       const denied = await post(port, '/v1/wait', {}, false);
       assert.equal(denied.status, 401);
 

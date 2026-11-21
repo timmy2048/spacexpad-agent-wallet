@@ -14,8 +14,18 @@ export type Cluster = {
   priceId: string;
 };
 
+// Solana Labs' public mainnet RPC returns HTTP 403 "Access forbidden" when the
+// request carries a browser Origin, which every extension fetch does. Devnet
+// still accepts that Origin. PublicNode answers getBalance from the extension.
+export const SOLANA_BROWSER_MAINNET_RPC = 'https://solana-rpc.publicnode.com';
+
+const LABS_SOLANA_MAINNET = new Set([
+  'https://api.mainnet-beta.solana.com',
+  'https://api.mainnet.solana.com',
+]);
+
 export const DEFAULT_RPCS: Record<string, string> = {
-  'solana:mainnet': 'https://api.mainnet-beta.solana.com',
+  'solana:mainnet': SOLANA_BROWSER_MAINNET_RPC,
   'solana:devnet': 'https://api.devnet.solana.com',
   'ethereum:mainnet': 'https://ethereum-rpc.publicnode.com',
   'ethereum:testnet': 'https://ethereum-sepolia-rpc.publicnode.com',
@@ -107,7 +117,7 @@ const CLUSTERS: Record<string, Cluster> = {
     addressKind: 'evm',
     rpcKey: 'bnb:mainnet',
     clusterName: 'Mainnet',
-    blockscout: 'https://bsc.blockscout.com',
+    blockscout: null,
     priceId: 'coingecko:binancecoin',
   },
   'bnb:testnet': {
@@ -119,10 +129,16 @@ const CLUSTERS: Record<string, Cluster> = {
     addressKind: 'evm',
     rpcKey: 'bnb:testnet',
     clusterName: 'BSC testnet',
-    blockscout: 'https://bsc-testnet.blockscout.com',
+    blockscout: null,
     priceId: 'coingecko:binancecoin',
   },
 };
+
+export function browserRpcUrl(chain: ChainId, network: NetworkId, configured: string): string {
+  const url = configured.trim().replace(/\/+$/, '');
+  if (chain === 'solana' && network === 'mainnet' && LABS_SOLANA_MAINNET.has(url)) return SOLANA_BROWSER_MAINNET_RPC;
+  return url;
+}
 
 export function isChainId(value: string): value is ChainId {
   return (CHAIN_ORDER as readonly string[]).includes(value);

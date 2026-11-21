@@ -21,6 +21,7 @@ export function defaultStore(): Store {
     version: 1,
     language: 'en',
     username: '',
+    assetView: 'mainnet',
     auth: null,
     addresses: null,
     policy: { ...DEFAULT_POLICY, whitelist: [] },
@@ -46,6 +47,7 @@ export function normalizeStore(value: unknown): Store {
     ...base,
     ...raw,
     version: 1,
+    assetView: raw.assetView === 'test' ? 'test' : 'mainnet',
     policy: { ...base.policy, ...raw.policy, whitelist: raw.policy?.whitelist ?? [] },
     agents: raw.agents ?? [],
     activity: raw.activity ?? [],
@@ -64,7 +66,11 @@ export function normalizeStore(value: unknown): Store {
 }
 
 function pendingShape(value: Store['pendingApproval'] | undefined): value is NonNullable<Store['pendingApproval']> {
-  return Boolean(value && typeof value.id === 'string' && (value.method === 'sign' || value.method === 'send'));
+  return Boolean(
+    value &&
+      typeof value.id === 'string' &&
+      (value.method === 'sign' || value.method === 'send' || value.method === 'sign_message'),
+  );
 }
 
 function approvalShape(value: Store['approval'] | undefined): value is NonNullable<Store['approval']> {
@@ -73,6 +79,10 @@ function approvalShape(value: Store['approval'] | undefined): value is NonNullab
 
 export function isDisplayName(value: string): boolean {
   return /^[\p{L}\p{N}_]{2,24}$/u.test(value);
+}
+
+export function walletReady(store: { agents: readonly unknown[] }): boolean {
+  return store.agents.length > 0;
 }
 
 export function hasAppId(settings: Settings): boolean {

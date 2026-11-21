@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { serializeTransaction, type Hex } from 'viem';
-import { buildAssetGroups, nativeAsset, parseBlockscoutTokens, parseSolanaTokenAccounts } from './assets.ts';
-import { resolveCluster } from './chains.ts';
+import { buildAssetGroups, displayNetwork, homeChains, nativeAsset, parseBinplorerTokens, parseBlockscoutTokens, parseJupiterHoldings, parseSolanaTokenAccounts } from './assets.ts';
+import { browserRpcUrl, resolveCluster } from './chains.ts';
 import { evmCallFromSerialized, evmDestinations } from './evmIntent.ts';
 import { copyKeys, t } from './i18n.ts';
 import { evaluatePolicy } from './policy.ts';
-import { buildPairPrompt, MCP_TOOL_NAMES } from './prompt.ts';
-import { isDisplayName } from './store.ts';
+import { buildInstallNote, buildPairPrompt, MCP_TOOL_NAMES } from './prompt.ts';
+import { defaultStore, isDisplayName, walletReady } from './store.ts';
 import { DEFAULT_POLICY } from './types.ts';
 import { CHAIN_ORDER } from './types.ts';
 import { embeddedPresence, missingEmbeddedWallets } from './wallets.ts';
@@ -23,6 +23,10 @@ describe('networks', () => {
     assert.throws(() => resolveCluster('solana', 'testnet'), /devnet/);
     assert.throws(() => resolveCluster('base', 'devnet'), /testnet/);
     assert.throws(() => resolveCluster('ethereum', 'sepolia'), /mainnet/);
+    assert.equal(browserRpcUrl('solana', 'mainnet', 'https://api.mainnet-beta.solana.com'), 'https://solana-rpc.publicnode.com');
+    assert.equal(browserRpcUrl('solana', 'mainnet', 'https://api.mainnet-beta.solana.com/'), 'https://solana-rpc.publicnode.com');
+    assert.equal(browserRpcUrl('solana', 'devnet', 'https://api.devnet.solana.com'), 'https://api.devnet.solana.com');
+    assert.equal(browserRpcUrl('ethereum', 'mainnet', 'https://ethereum-rpc.publicnode.com'), 'https://ethereum-rpc.publicnode.com');
   });
 
   it('lists only the four supported chains', () => {
@@ -31,6 +35,49 @@ describe('networks', () => {
 });
 
 describe('assets', () => {
+  it('uses devnet for the Solana test view and leaves omitted agent networks on mainnet', () => {
+    const snapshots = [
+      {
+        chain: 'solana' as const,
+        network: 'mainnet' as const,
+        status: 'ready' as const,
+        error: null,
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('solana', 2n)],
+      },
+      {
+        chain: 'solana' as const,
+        network: 'devnet' as const,
+        status: 'ready' as const,
+        error: null,
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('solana', 9n)],
+      },
+      {
+        chain: 'ethereum' as const,
+        network: 'testnet' as const,
+        status: 'error' as const,
+        error: 'rpc',
+        tokenListError: null,
+        readAt: 1,
+        assets: [],
+      },
+    ];
+    assert.equal(homeChains('solana', snapshots)[0]?.network, 'mainnet');
+    assert.equal(homeChains('solana', snapshots, 'test')[0]?.network, 'devnet');
+    assert.equal(homeChains('solana', snapshots, 'test')[0]?.assets[0]?.amount, nativeAsset('solana', 9n).amount);
+    assert.equal(displayNetwork('solana', 'test'), 'devnet');
+    assert.equal(displayNetwork('ethereum', 'test'), 'testnet');
+    assert.equal(displayNetwork('base', 'test'), 'testnet');
+    assert.equal(displayNetwork('bnb', 'test'), 'testnet');
+    const eth = homeChains('evm', snapshots, 'test').find((cluster) => cluster.chain === 'ethereum');
+    assert.equal(eth?.status, 'error');
+    assert.equal(eth?.assets.length, 0);
+    assert.equal(resolveCluster('solana', undefined).network, 'mainnet');
+  });
+
   it('does not invent a zero before mainnet is read', () => {
     const groups = buildAssetGroups([]);
     assert.deepEqual(
@@ -94,6 +141,62 @@ describe('assets', () => {
       { value: '1', token: { address: '0x3', symbol: 'NFT', decimals: '0', type: 'ERC-721' } },
     ]);
     assert.deepEqual(evm.map((asset) => asset.symbol), ['USDC']);
+  });
+
+  it('shows one network at a time and does not turn a failed read into zero', () => {
+    const ready = homeChains('solana', [
+      {
+        chain: 'solana',
+        network: 'mainnet',
+        status: 'ready',
+        error: null,
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('solana', 0n)],
+      },
+    ]);
+    assert.equal(ready.length, 1);
+    assert.equal(ready[0]?.assets[0]?.amount, '0');
+    const failed = homeChains('evm', [
+      {
+        chain: 'ethereum',
+        network: 'mainnet',
+        status: 'error',
+        error: 'eth_getBalance failed (403).',
+        tokenListError: null,
+        readAt: 1,
+        assets: [nativeAsset('ethereum', 0n)],
+      },
+    ]);
+    assert.deepEqual(
+      failed.map((item) => item.chain),
+      ['ethereum', 'base', 'bnb'],
+    );
+    assert.equal(failed[0]?.status, 'error');
+    assert.equal(failed[0]?.assets.length, 0);
+    assert.equal(failed[1]?.status, 'absent');
+    assert.equal(failed[1]?.assets.length, 0);
+  });
+
+  it('parses Jupiter holdings and Binplorer token lists', () => {
+    const sol = parseJupiterHoldings({
+      tokens: {
+        EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: [{ amount: '0', decimals: 6, uiAmountString: '0' }],
+        Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: [{ amount: '2500000', decimals: 6, uiAmountString: '2.5' }],
+      },
+    });
+    assert.equal(sol.length, 1);
+    assert.equal(sol[0]?.symbol, 'USDT');
+    assert.equal(sol[0]?.amount, '2.5');
+    const bnb = parseBinplorerTokens({
+      tokens: [
+        { rawBalance: '0', tokenInfo: { address: '0x1', symbol: 'ZERO', decimals: '18', name: 'Zero' } },
+        { rawBalance: '1000000000000000000', tokenInfo: { address: '0x55d398326f99059ff775485246999027b3197955', symbol: 'USDT', decimals: '18', name: 'Tether USD' } },
+      ],
+    });
+    assert.equal(bnb.length, 1);
+    assert.equal(bnb[0]?.symbol, 'USDT');
+    assert.equal(bnb[0]?.amount, '1');
   });
 });
 
@@ -159,19 +262,37 @@ describe('embedded wallets', () => {
 });
 
 describe('prompt and copy', () => {
-  it('tells the agent how to run the local MCP server and that mainnet is the default', () => {
+  it('gives the agent one sentence plus a registered pair code', () => {
     const prompt = buildPairPrompt('ABCD2345');
+    assert.equal(prompt.split('\n')[0], 'Read https://spacexpad.xyz/agent-wallet/skill.md and set up this SpaceXpad agent wallet.');
     assert.match(prompt, /PAIR_CODE: ABCD2345/);
-    assert.match(prompt, /node --experimental-strip-types mcp\/src\/index.ts/);
-    assert.match(prompt, /127\.0\.0\.1:47321/);
-    assert.match(prompt, /omit network to use mainnet/i);
-    assert.match(prompt, /https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md/);
+    assert.match(prompt, /30 minutes/);
     assert.doesNotMatch(prompt, /https:\/\/spacexpad\.xyz\/skill(?:\.md)?/);
-    assert.match(prompt, /not published/);
-    assert.match(prompt, /no hosted wallet endpoint/i);
-    assert.doesNotMatch(prompt, /https?:\/\/(?!(127\.0\.0\.1|spacexpad\.xyz))/);
-    for (const name of MCP_TOOL_NAMES) assert.match(prompt, new RegExp(name));
-    assert.equal(prompt.includes('尚未读取'), false);
+    assert.doesNotMatch(prompt, /npm install/);
+    assert.doesNotMatch(prompt, /mcp\/src\/index\.ts/);
+    assert.doesNotMatch(prompt, /omit network/i);
+    assert.doesNotMatch(prompt, /bridge token/i);
+    assert.doesNotMatch(prompt, /launchpad/i);
+    assert.doesNotMatch(prompt, /spacexpad_pair/);
+    assert.equal(prompt.split('\n').length <= 4, true);
+    assert.equal(MCP_TOOL_NAMES.includes('spacexpad_pair'), true);
+  });
+
+  it('includes the pair code in the first copy', () => {
+    const note = buildInstallNote('ABCD2345');
+    assert.match(note, /^Read https:\/\/spacexpad\.xyz\/agent-wallet\/skill\.md and set up this SpaceXpad agent wallet\./);
+    assert.match(note, /PAIR_CODE: ABCD2345/);
+    assert.doesNotMatch(note, /npm install/);
+    assert.doesNotMatch(note, /copy again/i);
+  });
+
+  it('keeps the wallet closed until an agent is bound', () => {
+    const store = defaultStore();
+    assert.equal(walletReady(store), false);
+    assert.equal(
+      walletReady({ ...store, agents: [{ id: '1', name: 'ada', token: 'spx_bind_aa', boundAt: 1 }] }),
+      true,
+    );
   });
 
   it('keeps translations aligned and drops the unread placeholder', () => {
@@ -182,6 +303,11 @@ describe('prompt and copy', () => {
         assert.equal(line.includes('尚未读取'), false);
         assert.equal(line.includes('尚未讀取'), false);
         assert.equal(line.includes('Not read yet'), false);
+        assert.equal(/only on this device/i.test(line), false);
+        assert.equal(line.includes('只显示在这台设备上'), false);
+        assert.equal(line.includes('只顯示在這台裝置上'), false);
+        assert.equal(/paste a bridge token into settings/i.test(line), false);
+        assert.equal(line.includes('贴进设置'), false);
       }
     }
   });

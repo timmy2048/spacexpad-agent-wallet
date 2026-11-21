@@ -4,7 +4,7 @@
   "bridgeUrl": "http://127.0.0.1:47321",
   "bridgeToken": "",
   "rpc": {
-    "solana:mainnet": "https://api.mainnet-beta.solana.com",
+    "solana:mainnet": "https://solana-rpc.publicnode.com",
     "solana:devnet": "https://api.devnet.solana.com",
     "ethereum:mainnet": "https://ethereum-rpc.publicnode.com",
     "ethereum:testnet": "https://ethereum-sepolia-rpc.publicnode.com",

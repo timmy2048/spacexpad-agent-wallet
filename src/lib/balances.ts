@@ -1,6 +1,6 @@
-import { llamaChain, resolveCluster } from '../../shared/chains.ts';
+import { browserRpcUrl, llamaChain, resolveCluster } from '../../shared/chains.ts';
 import { formatUsd, rawToMicroUsd } from '../../shared/money.ts';
-import { nativeAsset, parseBlockscoutTokens, parseSolanaTokenAccounts } from '../../shared/assets.ts';
+import { nativeAsset, parseBinplorerTokens, parseBlockscoutTokens, parseJupiterHoldings, parseSolanaTokenAccounts } from '../../shared/assets.ts';
 import type { Asset, ChainId, NetworkId, Snapshot } from '../../shared/types.ts';
 
 const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
@@ -17,11 +17,12 @@ export async function readClusterBalance(input: {
   const cluster = resolveCluster(input.chain, input.network);
   const address = cluster.addressKind === 'solana' ? input.solanaAddress : input.evmAddress;
   if (!address) throw new Error('Wallets are not ready yet.');
+  const rpcUrl = browserRpcUrl(cluster.chain, cluster.network, input.rpcUrl);
   try {
     const nativeRaw =
       cluster.chain === 'solana'
-        ? await solanaLamports(input.rpcUrl, address)
-        : await evmBalance(input.rpcUrl, address);
+        ? await solanaLamports(rpcUrl, address)
+        : await evmBalance(rpcUrl, address);
     const native = nativeAsset(cluster.chain, nativeRaw);
     native.usd = await nativeUsd(cluster.priceId, nativeRaw, cluster.nativeDecimals);
     let tokens: Asset[] = [];
@@ -29,8 +30,8 @@ export async function readClusterBalance(input: {
     try {
       tokens =
         cluster.chain === 'solana'
-          ? await solanaTokens(input.rpcUrl, address)
-          : await evmTokens(cluster.blockscout, address);
+          ? await solanaTokens(rpcUrl, address, cluster.network)
+          : await evmTokens(cluster.chain, cluster.network, cluster.blockscout, address);
       await attachTokenPrices(cluster.chain, tokens);
     } catch (error) {
       tokenListError = error instanceof Error ? error.message : 'Token list could not be loaded.';
@@ -51,7 +52,7 @@ export async function readClusterBalance(input: {
       status: 'error',
       error: error instanceof Error ? error.message : 'Balance could not be loaded.',
       tokenListError: null,
-      assets: [nativeAsset(cluster.chain, 0n)],
+      assets: [],
       readAt: input.now,
     };
   }
@@ -64,7 +65,22 @@ async function solanaLamports(rpcUrl: string, address: string): Promise<bigint> 
   return BigInt(value);
 }
 
-async function solanaTokens(rpcUrl: string, address: string): Promise<Asset[]> {
+async function solanaTokens(rpcUrl: string, address: string, network: NetworkId): Promise<Asset[]> {
+  try {
+    return await solanaTokenAccounts(rpcUrl, address);
+  } catch (error) {
+    if (network !== 'mainnet') throw error;
+    try {
+      return await jupiterHoldings(address);
+    } catch (fallback) {
+      const first = error instanceof Error ? error.message : 'Token list could not be loaded.';
+      const second = fallback instanceof Error ? fallback.message : 'Token list could not be loaded.';
+      throw new Error(`${first} ${second}`);
+    }
+  }
+}
+
+async function solanaTokenAccounts(rpcUrl: string, address: string): Promise<Asset[]> {
   const classic = await rpc(rpcUrl, 'getTokenAccountsByOwner', [
     address,
     { programId: TOKEN_PROGRAM },
@@ -78,6 +94,13 @@ async function solanaTokens(rpcUrl: string, address: string): Promise<Asset[]> {
   return [...parseSolanaTokenAccounts(classic), ...parseSolanaTokenAccounts(next)];
 }
 
+async function jupiterHoldings(address: string): Promise<Asset[]> {
+  const response = await fetch(`https://lite-api.jup.ag/ultra/v1/holdings/${encodeURIComponent(address)}`);
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Token list failed (${response.status}).`);
+  return parseJupiterHoldings(JSON.parse(text) as unknown);
+}
+
 async function evmBalance(rpcUrl: string, address: string): Promise<bigint> {
   const json = await rpc(rpcUrl, 'eth_getBalance', [address, 'latest']);
   const value = (json as { result?: string }).result;
@@ -85,12 +108,25 @@ async function evmBalance(rpcUrl: string, address: string): Promise<bigint> {
   return BigInt(value);
 }
 
-async function evmTokens(blockscout: string | null, address: string): Promise<Asset[]> {
+async function evmTokens(chain: ChainId, network: NetworkId, blockscout: string | null, address: string): Promise<Asset[]> {
+  if (chain === 'bnb') {
+    if (network !== 'mainnet') throw new Error('BNB Chain testnet token list is not available.');
+    return binplorerTokens(address);
+  }
   if (!blockscout) return [];
   const response = await fetch(`${blockscout}/api/v2/addresses/${address}/token-balances`);
   const text = await response.text();
   if (!response.ok) throw new Error(`Token list failed (${response.status}).`);
   return parseBlockscoutTokens(JSON.parse(text) as unknown);
+}
+
+async function binplorerTokens(address: string): Promise<Asset[]> {
+  const response = await fetch(`https://api.binplorer.com/getAddressInfo/${address}?apiKey=freekey`);
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Token list failed (${response.status}).`);
+  const json = JSON.parse(text) as { error?: unknown };
+  if (json.error) throw new Error('Token list could not be loaded.');
+  return parseBinplorerTokens(json);
 }
 
 async function rpc(url: string, method: string, params: unknown[]): Promise<unknown> {

@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { hasAppId } from '../../shared/store.ts';
 import type { Inbound, PendingApproval } from '../../shared/types.ts';
 import { handleAgentRequest } from '../lib/handleRequest.ts';
-import { bridgePost, loadStore, updateStore } from '../lib/storage.ts';
+import { bridgePost, ensureBridgeToken, loadStore, registerStoredPair, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
 import { useExtensionStore } from '../popup/useStore.ts';
 
@@ -30,20 +30,28 @@ function Offscreen() {
 }
 
 function BridgeLoop() {
-  const { sign } = useVault();
+  const { sign, signMessage } = useVault();
   const signRef = useRef(sign);
   signRef.current = sign;
+  const signMessageRef = useRef(signMessage);
+  signMessageRef.current = signMessage;
   useEffect(() => {
     let stopped = false;
     const loop = async () => {
       while (!stopped) {
-        const store = await loadStore();
+        let store = await loadStore();
         if (!store.settings.bridgeToken) {
-          await sleep(2000);
-          continue;
+          const adopted = await ensureBridgeToken(store.settings);
+          if (!adopted.bridgeToken) {
+            await sleep(2000);
+            continue;
+          }
+          store = await loadStore();
         }
         try {
-          const json = await bridgePost(store.settings, '/v1/wait', {});
+          await publishPendingPair(store);
+          const ready = await loadStore();
+          const json = await bridgePost(ready.settings, '/v1/wait', {});
           if (stopped) return;
           await updateStore((current) => ({
             ...current,
@@ -56,6 +64,7 @@ function BridgeLoop() {
               load: loadStore,
               update: updateStore,
               sign: (params, rpcUrl, method) => signRef.current(params, rpcUrl, method),
+              signMessage: (input) => signMessageRef.current(input),
               confirm: async (id) => {
                 const latest = await loadStore();
                 const answer = await bridgePost(latest.settings, '/v1/confirm', { id });
@@ -85,6 +94,16 @@ function BridgeLoop() {
     };
   }, []);
   return null;
+}
+
+async function publishPendingPair(store: Awaited<ReturnType<typeof loadStore>>): Promise<void> {
+  const pair = store.pair;
+  if (!pair || pair.registered || pair.expiresAt < Date.now()) return;
+  const registered = await registerStoredPair(store.settings, pair);
+  if (!registered) return;
+  await updateStore((current) =>
+    current.pair?.code === pair.code ? { ...current, pair: { ...current.pair, registered: true } } : current,
+  );
 }
 
 async function approveTestnet(pending: PendingApproval): Promise<boolean> {

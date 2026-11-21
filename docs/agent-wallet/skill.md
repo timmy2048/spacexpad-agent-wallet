@@ -23,9 +23,9 @@ node --experimental-strip-types mcp/src/index.ts
 
 `npm run mcp` starts the same process. Load the unpacked extension from the `dist` folder. The extension id pinned by the manifest key is `kgjgdglopjkfahcipgkpnnkenjnoineo`.
 
-The process speaks MCP on stdin and stdout. It also listens on `http://127.0.0.1:47321`. Only loopback clients are accepted. Every route except `GET /v1/health` requires `Authorization: Bearer <bridge token>`.
+The process speaks MCP on stdin and stdout. It also listens on `http://127.0.0.1:47321`. Only loopback clients are accepted. Every route except `GET /v1/health` and `GET /v1/bootstrap` requires `Authorization: Bearer <bridge token>`. `/v1/bootstrap` exists so the extension can adopt the token. Do not print that token in chat.
 
-The bridge token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. The user pastes that token into the extension Settings. Do not ask for the token in chat, and do not put it in a URL.
+The bridge token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. The extension adopts that token from the local server on its own. Do not ask the user to paste a bridge token into Settings, do not ask for it in chat, and do not put it in a URL.
 
 Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`.
 
@@ -52,6 +52,7 @@ After the client connects, discover tools from the server. It registers only the
 - `spacexpad_get_balance`
 - `spacexpad_sign_transaction`
 - `spacexpad_send_transaction`
+- `spacexpad_sign_message`
 
 Do not invent other tool names.
 
@@ -59,10 +60,10 @@ Do not invent other tool names.
 
 1. The user copies a prompt from the extension. It contains `PAIR_CODE:`.
 2. Call `spacexpad_pair` with that code and your agent name.
-3. Show the returned token that starts with `spx_bind_` and wait until the user pastes it into the extension.
+3. Show the returned token that starts with `spx_bind_` and wait until the user pastes it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
-The code expires about 10 minutes after it was copied. The user can remove the binding in the extension. Do not put the pair code or the binding token in a public URL.
+The code expires about 30 minutes after it was copied. The user can remove the binding in the extension. Do not put the pair code or the binding token in a public URL.
 
 ## Mainnet unless the user names a test network
 
@@ -72,7 +73,7 @@ Omit `network` to use mainnet. The wallet view is mainnet as well. Pass `testnet
 
 Solana test traffic is `devnet`, not `testnet`. Ethereum and Base `testnet` means Sepolia. BNB Chain `testnet` means BSC testnet. `devnet` is valid only for Solana.
 
-A testnet or devnet signature or send waits for confirmation in the extension. Nothing is signed until the user confirms. Mainnet does not ask that extra question. The risk policy and the kill switch still apply on every network.
+A testnet or devnet transaction signature or send waits for confirmation in the extension. Nothing is signed until the user confirms. A mainnet transaction does not ask that extra question. Message signing always asks, including on mainnet. The risk policy and the kill switch still apply.
 
 ## Tools
 
@@ -80,6 +81,15 @@ A testnet or devnet signature or send waits for confirmation in the extension. N
 - `spacexpad_get_balance` reads the native balance and other fungible tokens for the chain you pass. A zero native balance is a completed read. If `tokenListError` is set, say the token list failed instead of claiming the wallet holds only the native asset. Solana token symbols that cannot be resolved are a shortened mint. NFTs are not listed.
 - `spacexpad_sign_transaction` signs and returns the signed transaction. It does not broadcast. Do not tell the user it was sent.
 - `spacexpad_send_transaction` signs and submits. Report a hash only when the result includes one. Status `submitted` means the RPC accepted it, not that it is confirmed.
+- `spacexpad_sign_message` signs arbitrary bytes with the bound Solana wallet. It is not a transaction signature. `chain` must be `solana`. Omit `network` for mainnet, or pass `devnet` when the user asked for Solana test traffic. `encoding` defaults to `utf8`: the exact UTF-8 bytes of `message` are signed, with no prefix and no wrapping. Pass `hex` (optional `0x`) or `base64` only when the message is not text. The popup shows that text and waits for Confirm on every network, including mainnet. The result `signature` is base64. `POST https://spacexpad.xyz/api/agent/verify` expects `{ "wallet": "<publicKey>", "signature": "<that base64>" }` because `verifyChallengeWithWalletPubkey` decodes the signature as base64 over the challenge `message` UTF-8 bytes. `signatureBase58` is the same signature bytes. Do not send a transaction signature to that endpoint.
+
+## Manual message-sign check
+
+1. Bind an agent and copy the Solana address from the wallet.
+2. `GET https://spacexpad.xyz/api/agent/challenge?wallet=<that address>` and keep the `message` string exactly.
+3. Call `spacexpad_sign_message` with `chain: "solana"`, `encoding: "utf8"`, and that `message`. Confirm in the popup.
+4. `POST https://spacexpad.xyz/api/agent/verify` with `{ "wallet": "<publicKey>", "signature": "<signature>" }` using the base64 `signature` field.
+5. A successful session returns `ok: true` and a `sessionToken`. A transaction signature will not pass.
 
 `kind` is `native_transfer` (`to` plus a human `amount`) or `serialized` (a hex or base64 transaction).
 
