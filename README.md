@@ -48,18 +48,18 @@ Privy's embedded-wallet client still has to attach to some EVM chain when it loa
 
 ## Using the wallet
 
-Sign in with Gmail or an email code. The username is a display name edited in Settings after login. It is stored only in this browser profile. The format check is 2–24 letters, numbers, or underscores. There is no account server and no global uniqueness check, so the same display name can exist on another device. Sign-in and wallet identity use the Privy user id (`auth.userId`) and the Solana plus EVM addresses, not the display name.
+Sign in with email first, then Google. The username is a display name edited in Settings after login. The format check is 2–24 letters, numbers, or underscores. There is no account server and no global uniqueness check, so the same display name can exist for someone else. Sign-in and wallet identity use the Privy user id (`auth.userId`) and the Solana plus EVM addresses, not the display name.
 
-Hover or focus the `@username` row to copy addresses. The list is Solana, Ethereum, Base, and BNB Chain. The three EVM rows are the same `0x` address. Keyboard users can open the list from the button, tab to a copy control, and leave with Escape.
+The first screen after a new login is bind-agent. Assets stay closed until an agent is bound. There is no skip. A returning user who already has a bound agent opens on assets. Revoking the last agent closes the wallet again; the next open is the bind screen.
 
-The asset list reads mainnet for all four chains after the wallets exist. A shown zero is a completed read. A failed RPC stays an error and is not displayed as zero. Other fungible tokens are listed under the chain that held them. Solana uses `getTokenAccountsByOwner` and shows a shortened mint when no symbol is available. Ethereum, Base, and BNB Chain use Blockscout's token-balance API. NFTs are not listed. If the token index fails, the native balance still shows and the index error is separate. An agent can still read an explicit testnet or devnet; that result is labeled and is not the default view.
+The asset home shows one network at a time, Solana by default or the shared EVM address. Copy lives on that switcher. Ethereum, Base, and BNB Chain are not four separate homes. A shown zero is a completed read. A failed RPC stays an error and is not displayed as zero. Solana reads the native balance from a browser-reachable RPC (`https://solana-rpc.publicnode.com`), because `https://api.mainnet-beta.solana.com` returns HTTP 403 when the request has a browser Origin. SPL tokens fall back to Jupiter's public holdings API when the RPC blocks `getTokenAccountsByOwner`. Ethereum and Base still use Blockscout. BNB Chain does not: `https://bsc.blockscout.com` answers HTTP 404 (`default backend - 404`), so the BNB token list comes from Binplorer. NFTs are not listed. If the token index fails, the native balance still shows and the index error is separate.
 
-Bind an agent from the Agent tab:
+Bind an agent before the wallet can be used:
 
-1. Start the local MCP server (see below) and paste its bridge token into Settings.
-2. Copy the prompt. It contains `PAIR_CODE`, the real tool names, and the local command. It expires in 10 minutes.
-3. Give it to the agent. The agent calls `spacexpad_pair` and shows an `spx_bind_...` token.
-4. Paste that token into the extension. Remove the agent later to revoke it.
+1. Start the local MCP server (see below). The extension adopts the bridge token from loopback. Do not paste it into Settings.
+2. Copy the install note. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes `PAIR_CODE`. It expires in 10 minutes.
+3. The agent calls `spacexpad_pair` and shows an `spx_bind_...` token.
+4. Paste that token into the bind screen. Remove the agent later from the Agent tab to revoke it.
 
 Settings cover language (简体中文, 繁體中文, English), username, and the risk policy. Full access is the default: no USD cap. You can switch on a single-transaction USD limit and a daily USD limit. An optional whitelist allows signing only when each destination is on the list (the recipient for a native transfer, the contract for a call, the mint for an SPL transfer). The kill switch pauses signing and sending for every agent. Balance reads still work. Resume is on the paused line and in Settings.
 
@@ -75,7 +75,7 @@ npm run build
 node --experimental-strip-types mcp/src/index.ts
 ```
 
-`npm run mcp` is the same process. It listens on `127.0.0.1:47321`, requires a bearer token on every route except `GET /v1/health`, and rejects a non-loopback `Host`. The token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. Paste it into Settings. Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`.
+`npm run mcp` is the same process. It listens on `127.0.0.1:47321`, requires a bearer token on every route except `GET /v1/health` and `GET /v1/bootstrap`, and rejects a non-loopback `Host`. The token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. The extension reads it from `/v1/bootstrap`. Do not paste it into Settings. Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`.
 
 Cursor or Claude Desktop:
 

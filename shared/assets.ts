@@ -124,6 +124,97 @@ type BlockscoutRow = {
   };
 };
 
+const SOLANA_MINTS: Record<string, { symbol: string; name: string }> = {
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: 'USDC', name: 'USD Coin' },
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { symbol: 'USDT', name: 'Tether USD' },
+};
+
+export type HomeId = 'solana' | 'evm';
+
+export function homeChains(home: HomeId, snapshots: Snapshot[]): ChainGroup['clusters'] {
+  const chains: ChainId[] = home === 'solana' ? ['solana'] : ['ethereum', 'base', 'bnb'];
+  return chains.map((chain) => {
+    const snapshot = snapshots.find((item) => item.chain === chain && item.network === 'mainnet');
+    if (!snapshot) return absentMainnet(chain);
+    if (snapshot.status === 'error') {
+      return { chain, network: 'mainnet' as const, status: 'error' as const, error: snapshot.error, tokenListError: null, assets: [] };
+    }
+    return viewFrom(chain, snapshot);
+  });
+}
+
+type JupiterRow = {
+  amount?: string;
+  uiAmountString?: string;
+  decimals?: number;
+};
+
+export function parseJupiterHoldings(json: unknown): Asset[] {
+  const tokens = (json as { tokens?: Record<string, JupiterRow[] | undefined> }).tokens ?? {};
+  const assets: Asset[] = [];
+  for (const [mint, rows] of Object.entries(tokens)) {
+    if (!Array.isArray(rows) || rows.length === 0) continue;
+    let raw = 0n;
+    let decimals = 0;
+    let singleUi = '';
+    let counted = 0;
+    for (const row of rows) {
+      const amount = row?.amount;
+      if (typeof amount !== 'string' || !/^\d+$/.test(amount)) continue;
+      const value = BigInt(amount);
+      if (value <= 0n) continue;
+      raw += value;
+      if (Number.isInteger(row.decimals) && (row.decimals as number) >= 0 && (row.decimals as number) <= 18) {
+        decimals = row.decimals as number;
+      }
+      if (typeof row.uiAmountString === 'string') singleUi = row.uiAmountString;
+      counted += 1;
+    }
+    if (raw <= 0n) continue;
+    const known = SOLANA_MINTS[mint];
+    assets.push({
+      symbol: known?.symbol ?? `${mint.slice(0, 4)}...${mint.slice(-4)}`,
+      name: known?.name ?? mint,
+      amount: counted === 1 && singleUi ? singleUi : formatRaw(raw, decimals),
+      raw: raw.toString(),
+      decimals,
+      contract: mint,
+      native: false,
+      usd: null,
+    });
+  }
+  return assets;
+}
+
+type BinplorerRow = {
+  rawBalance?: string;
+  tokenInfo?: { address?: string; decimals?: string | number | null; name?: string | null; symbol?: string | null };
+};
+
+export function parseBinplorerTokens(json: unknown): Asset[] {
+  const rows = (json as { tokens?: BinplorerRow[] }).tokens ?? [];
+  const assets: Asset[] = [];
+  for (const row of rows) {
+    const info = row.tokenInfo;
+    const raw = row.rawBalance ?? '';
+    if (!info?.address || !/^\d+$/.test(raw) || BigInt(raw) <= 0n) continue;
+    const decimals = Number(info.decimals ?? 0);
+    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 36) continue;
+    const symbol = (info.symbol || '').trim() || `${info.address.slice(0, 6)}...${info.address.slice(-4)}`;
+    assets.push({
+      symbol,
+      name: (info.name || symbol).trim(),
+      amount: formatRaw(BigInt(raw), decimals),
+      raw,
+      decimals,
+      contract: info.address,
+      native: false,
+      usd: null,
+    });
+  }
+  return assets;
+}
+
 export function parseBlockscoutTokens(json: unknown): Asset[] {
   const rows = Array.isArray(json)
     ? json

@@ -23,8 +23,8 @@ The agent bridge is a process you run on the same computer as Chrome. It is not 
 - MCP uses stdin and stdout. Configure the client to spawn the process. Do not wrap it in a shell that swallows stdio.
 - HTTP listens on `127.0.0.1:47321` (override with `SPACEXPAD_BRIDGE_PORT`).
 - Requests must use a `Host` of `127.0.0.1` or `localhost`.
-- Every route except `GET /v1/health` requires `Authorization: Bearer <bridge token>`.
-- The token is random, printed on stderr, and stored in `~/.spacexpad-agent-wallet/bridge.json`. Set `SPACEXPAD_BRIDGE_TOKEN` to pin one. Do not commit it. The extension stores the same token in `chrome.storage.local` after you paste it into Settings.
+- Every route except `GET /v1/health` and `GET /v1/bootstrap` requires `Authorization: Bearer <bridge token>`.
+- The token is random, printed on stderr, and stored in `~/.spacexpad-agent-wallet/bridge.json`. Set `SPACEXPAD_BRIDGE_TOKEN` to pin one. Do not commit it. The extension reads it from `GET /v1/bootstrap` on loopback and stores it in `chrome.storage.local`. There is no Settings field for it.
 
 The Chrome extension polls `POST /v1/wait` from the offscreen document. Tool calls wait until that poll is active. If the extension is closed or the token does not match, the tool returns an error and nothing is signed.
 
@@ -34,7 +34,7 @@ The Chrome extension polls `POST /v1/wait` from the offscreen document. Tool cal
 - This repository checked out
 - `npm install`
 - `npm run build` for the extension itself
-- Chrome with the unpacked `dist` loaded, the public Privy app id from `config.example.json`, and the bridge token saved in Settings
+- Chrome with the unpacked `dist` loaded and the public Privy app id from `config.example.json`. Start the local server before pairing. The extension picks up the bridge token itself.
 
 There is no App Secret in this repository. Do not add one.
 
@@ -70,7 +70,7 @@ Replace the `cwd` with the real absolute path. After the client connects, tool d
 - `spacexpad_sign_transaction`
 - `spacexpad_send_transaction`
 
-The copied pair prompt in the extension repeats this configuration. Pairing is a one-time code that expires in 10 minutes. The user pastes the `spx_bind_` token back into the extension. Removing the agent revokes that binding.
+The copied pair prompt is short. It tells the agent to read `https://spacexpad.xyz/agent-wallet/skill.md` and includes the pair code. Pairing expires in 10 minutes. The user pastes the `spx_bind_` token into the extension bind screen, not into Settings. Removing the last agent closes the wallet until another agent is bound.
 
 ## Networks
 
@@ -78,4 +78,4 @@ Omit `network` and the call uses mainnet. Pass `testnet` or `devnet` only when t
 
 ## Token lists
 
-Mainnet balances in the popup, and `spacexpad_get_balance`, read the native asset from the RPC in `config.example.json`. Other fungible tokens come from `getTokenAccountsByOwner` on Solana (symbol is the shortened mint when metadata is unavailable) and from Blockscout token-balance endpoints on Ethereum, Base, and BNB Chain. NFTs are not listed. If that index fails, the result includes `tokenListError` and still returns the native balance when the RPC read succeeded. Public RPCs are rate limited. A failed native read is an error, not a zero balance.
+Mainnet balances in the popup, and `spacexpad_get_balance`, read the native asset from the RPC in `config.example.json`. Solana mainnet uses `https://solana-rpc.publicnode.com` because the Solana Labs endpoint returns HTTP 403 to browser Origins. SPL token accounts fall back to Jupiter when that indexed RPC call is blocked. Ethereum and Base fungible tokens come from Blockscout. BNB Chain uses Binplorer because `bsc.blockscout.com` returns HTTP 404. NFTs are not listed. If that index fails, the result includes `tokenListError` and still returns the native balance when the RPC read succeeded. A failed native read is an error, not a zero balance.

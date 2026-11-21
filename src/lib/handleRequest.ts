@@ -1,4 +1,4 @@
-import { resolveCluster } from '../../shared/chains.ts';
+import { browserRpcUrl, resolveCluster } from '../../shared/chains.ts';
 import { policyText } from '../../shared/i18n.ts';
 import { utcDate } from '../../shared/money.ts';
 import { evaluatePolicy } from '../../shared/policy.ts';
@@ -24,11 +24,11 @@ export async function handleAgentRequest(deps: HandlerDeps, inbound: Inbound): P
     const store = await deps.load();
     const agent = store.agents.find((item) => item.token === inbound.params.bindToken);
     if (!agent) {
-      return { ok: false, error: 'This binding token is not recognized. Paste it into SpaceXpad first.' };
+      return { ok: false, error: 'This binding token is not recognized. Paste it into the SpaceXpad bind screen first.' };
     }
     if (inbound.method === 'get_addresses') return addresses(store);
     const cluster = resolveCluster(inbound.params.chain, inbound.params.network);
-    const rpcUrl = store.settings.rpc[cluster.rpcKey];
+    const rpcUrl = browserRpcUrl(cluster.chain, cluster.network, store.settings.rpc[cluster.rpcKey] ?? '');
     if (!rpcUrl) return { ok: false, error: `No RPC is configured for ${cluster.rpcKey}.` };
 
     if (inbound.method === 'get_balance') {

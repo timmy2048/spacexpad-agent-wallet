@@ -39,7 +39,7 @@ export function PrivyGate({
       clientId={clientId || undefined}
       config={{
         loginMethods: ['email', 'google'],
-        appearance: { theme: 'dark', accentColor: '#9fd7e4' },
+        appearance: { theme: 'dark', accentColor: '#38bdf8' },
         embeddedWallets: {
           showWalletUIs: false,
           // Dashboard "create on login" only runs for the Privy modal.

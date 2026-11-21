@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { hasAppId } from '../../shared/store.ts';
 import type { Inbound, PendingApproval } from '../../shared/types.ts';
 import { handleAgentRequest } from '../lib/handleRequest.ts';
-import { bridgePost, loadStore, updateStore } from '../lib/storage.ts';
+import { bridgePost, ensureBridgeToken, loadStore, updateStore } from '../lib/storage.ts';
 import { PrivyGate, useVault } from '../privy/useVault.tsx';
 import { useExtensionStore } from '../popup/useStore.ts';
 
@@ -39,7 +39,8 @@ function BridgeLoop() {
       while (!stopped) {
         const store = await loadStore();
         if (!store.settings.bridgeToken) {
-          await sleep(2000);
+          const adopted = await ensureBridgeToken(store.settings);
+          if (!adopted.bridgeToken) await sleep(2000);
           continue;
         }
         try {

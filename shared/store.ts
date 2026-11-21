@@ -75,6 +75,10 @@ export function isDisplayName(value: string): boolean {
   return /^[\p{L}\p{N}_]{2,24}$/u.test(value);
 }
 
+export function walletReady(store: { agents: readonly unknown[] }): boolean {
+  return store.agents.length > 0;
+}
+
 export function hasAppId(settings: Settings): boolean {
   const id = settings.privyAppId.trim();
   return id.length > 8 && !id.includes('YOUR_PRIVY');

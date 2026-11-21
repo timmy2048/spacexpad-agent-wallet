@@ -104,6 +104,30 @@ function cleanId(value: string | undefined): string {
   return trimmed;
 }
 
+export async function ensureBridgeToken(settings: Settings): Promise<Settings> {
+  if (settings.bridgeToken.trim()) return settings;
+  let response: Response;
+  try {
+    response = await fetch(`${settings.bridgeUrl}/v1/bootstrap`);
+  } catch {
+    return settings;
+  }
+  if (!response.ok) return settings;
+  let token = '';
+  try {
+    const json = (await response.json()) as { token?: unknown };
+    token = typeof json.token === 'string' ? json.token.trim() : '';
+  } catch {
+    return settings;
+  }
+  if (!token) return settings;
+  const next = await updateStore((store) => ({
+    ...store,
+    settings: { ...store.settings, bridgeToken: store.settings.bridgeToken.trim() || token },
+  }));
+  return next.settings;
+}
+
 export async function bridgePost(settings: Settings, path: string, body: unknown): Promise<Record<string, unknown>> {
   let response: Response;
   try {

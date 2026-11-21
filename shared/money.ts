@@ -50,7 +50,7 @@ export function utcDate(now: number): string {
 
 export function truncateAddress(address: string, kind: 'evm' | 'solana'): string {
   if (kind === 'evm') return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  return `${address.slice(0, 5)}...${address.slice(-5)}`;
 }
 
 export function sameAddress(left: string, right: string): boolean {

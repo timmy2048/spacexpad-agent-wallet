@@ -75,6 +75,10 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     send(res, 200, { ok: true });
     return;
   }
+  if (req.method === 'GET' && url === '/v1/bootstrap') {
+    send(res, 200, { token: state.token });
+    return;
+  }
   if (!authorized(req)) {
     send(res, 401, { error: 'Bridge token was rejected.' });
     return;
@@ -180,7 +184,7 @@ async function main(): Promise<void> {
     'spacexpad_pair',
     {
       description:
-        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user must paste into the extension. Later calls use mainnet unless testnet or devnet is explicit.',
+        'Complete pairing with a PAIR_CODE from the SpaceXpad extension. Returns an spx_bind_ token the user pastes into the extension bind screen. Do not ask them to paste a bridge token into Settings. Later calls use mainnet unless testnet or devnet is explicit.',
       inputSchema: { pairCode: z.string(), agentName: z.string() },
     },
     async ({ pairCode, agentName }) => {
@@ -189,7 +193,8 @@ async function main(): Promise<void> {
         await saveDisk();
         return toolText({
           ...issued,
-          message: 'Show this binding token to the user and ask them to paste it into SpaceXpad. Do not call other wallet tools until they have bound it.',
+          message:
+            'Show this binding token to the user and ask them to paste it into the SpaceXpad bind screen. Do not ask them to paste a bridge token into Settings. Do not call other wallet tools until the bind succeeds.',
         });
       } catch (error) {
         return toolText(error instanceof Error ? error.message : 'Pairing failed.', true);

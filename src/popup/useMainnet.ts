@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { resolveCluster } from '../../shared/chains.ts';
+import { browserRpcUrl, resolveCluster } from '../../shared/chains.ts';
 import { CHAIN_ORDER, type ChainId, type Snapshot, type Store } from '../../shared/types.ts';
 import { readClusterBalance } from '../lib/balances.ts';
 import { updateStore } from '../lib/storage.ts';
@@ -45,7 +45,7 @@ export function useMainnetBalances(store: Store): { pending: boolean; refresh: (
 
 async function readOne(store: Store, chain: ChainId): Promise<Snapshot> {
   const cluster = resolveCluster(chain, 'mainnet');
-  const rpcUrl = store.settings.rpc[cluster.rpcKey];
+  const rpcUrl = browserRpcUrl(chain, 'mainnet', store.settings.rpc[cluster.rpcKey] ?? '');
   if (!rpcUrl) return failed(chain, `No RPC is configured for ${cluster.rpcKey}.`);
   try {
     return await readClusterBalance({

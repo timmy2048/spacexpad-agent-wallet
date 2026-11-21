@@ -77,11 +77,11 @@ export function createBridge() {
       return {
         ok: false,
         error:
-          'SpaceXpad extension is not connected. Open Chrome with the extension loaded and the same bridge token.',
+          'SpaceXpad extension is not connected. Open Chrome with the extension loaded and signed in. The extension connects to this local bridge on its own.',
       };
     }
     if (inbound.method !== 'get_addresses' && !isRedeemed(inbound.params.bindToken)) {
-      return { ok: false, error: 'This binding token is not recognized. Paste it into SpaceXpad first.' };
+      return { ok: false, error: 'This binding token is not recognized. Paste it into the SpaceXpad bind screen first.' };
     }
     let resolveJob: (result: AgentResult) => void = () => undefined;
     const promise = new Promise<AgentResult>((resolve) => {

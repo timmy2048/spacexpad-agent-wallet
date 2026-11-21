@@ -23,9 +23,9 @@ node --experimental-strip-types mcp/src/index.ts
 
 `npm run mcp` starts the same process. Load the unpacked extension from the `dist` folder. The extension id pinned by the manifest key is `kgjgdglopjkfahcipgkpnnkenjnoineo`.
 
-The process speaks MCP on stdin and stdout. It also listens on `http://127.0.0.1:47321`. Only loopback clients are accepted. Every route except `GET /v1/health` requires `Authorization: Bearer <bridge token>`.
+The process speaks MCP on stdin and stdout. It also listens on `http://127.0.0.1:47321`. Only loopback clients are accepted. Every route except `GET /v1/health` and `GET /v1/bootstrap` requires `Authorization: Bearer <bridge token>`. `/v1/bootstrap` exists so the extension can adopt the token. Do not print that token in chat.
 
-The bridge token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. The user pastes that token into the extension Settings. Do not ask for the token in chat, and do not put it in a URL.
+The bridge token is printed on stderr and written to `~/.spacexpad-agent-wallet/bridge.json`. The extension adopts that token from the local server on its own. Do not ask the user to paste a bridge token into Settings, do not ask for it in chat, and do not put it in a URL.
 
 Override the port with `SPACEXPAD_BRIDGE_PORT` or the token with `SPACEXPAD_BRIDGE_TOKEN`.
 
@@ -59,7 +59,7 @@ Do not invent other tool names.
 
 1. The user copies a prompt from the extension. It contains `PAIR_CODE:`.
 2. Call `spacexpad_pair` with that code and your agent name.
-3. Show the returned token that starts with `spx_bind_` and wait until the user pastes it into the extension.
+3. Show the returned token that starts with `spx_bind_` and wait until the user pastes it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
 The code expires about 10 minutes after it was copied. The user can remove the binding in the extension. Do not put the pair code or the binding token in a public URL.

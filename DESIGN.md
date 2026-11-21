@@ -1,8 +1,8 @@
 # SpaceXpad agent wallet
 
-Operate surface. A 400×600 Chrome extension popup. The person checks a keyless vault and decides whether an agent may sign.
+Operate surface. A 380×600 Chrome extension popup. The person checks a keyless vault and decides whether an agent may sign. The first open after login is bind-agent. Assets open only after an agent is bound.
 
-Visual treatment is interim. Magic Patterns comps for this popup are still to be applied. This file records the structure taken from the three wallet studies and the tokens currently in CSS. Do not treat the current colors or spacing as the final brand.
+The signed-off treatment is the Orbital popup: Sora, IBM Plex Mono, and the tokens in `src/popup/styles.css`. The studies below explain what was kept from other wallets. They are not the visual source.
 
 ## What was studied
 
@@ -42,13 +42,11 @@ Taken: account header, a Wallet view and a separate Activity view, and a Setting
 
 ## Density
 
-The popup is 400px by 600px, inside the 380–400px extension width these three use. Header, account row, scrolling list, 56px bottom nav (Wallet, Agent, Activity, Settings). Type is 14px body, 15px account name, 12–13px meta. Addresses and amounts use JetBrains Mono with tabular figures. Inter is the UI face. Both are bundled with `@fontsource`. No third face.
+The popup is 380×600. Login is the wordmark “SpaceXpad Agent Wallet”, the brand icon, email, then Google. After login the wallet is closed until an agent is bound. The home that opens for a bound agent is the username, a bound status, one network row (Solana or EVM), that network’s tokens, and a three-item pill: Assets, Agent, Settings. Addresses and amounts use IBM Plex Mono. Sora is the UI face. Both are bundled with `@fontsource`.
 
-## Interim visual
+## Orbital visual
 
-Radix Slate roles, not a component library: background Slate 1 `#111113`, raised strip Slate 2 `#18191b`, line Slate 6 `#363a3f`, text Slate 12 `#edeef0`, secondary Slate 11 `#b0b4ba`. Accent `#8ec8d4` is only the focus ring, the current nav tick, and the native progress bar. Danger text `#ff9592`. One 160ms ease. `prefers-reduced-motion: reduce` removes it.
-
-No glow, no grid, no gradient text, no nested cards, no invented USD total, no invented activity. The four addresses are hidden until the pointer hovers the display name, or the keyboard focuses that button. The panel is an overlay, not a block in the asset list. `interestfor` / `popover="hint"` is still limited, so this is a plain disclosure. Copy buttons are in tab order. Escape returns focus to the account button.
+Paper `#121524`, panel `#1b2038`, panel-dark `#14182b`, rule `#38436e`, accent `#38bdf8`, ink `#f1f5f9`, mute `#94a3b8`. Rounded controls. No pixel font, no site grid, no glow. The network switcher is the only place an address is copied. The home never lists Solana and EVM assets at once. A failed read is an error, not a zero. The word mainnet is not a chip on this screen.
 
 The toolbar icon is the SpaceXpad X avatar at `assets/spacexpad-x-avatar.png`, a 1024×1024 PNG upscaled from the 192px frontend mark. `scripts/gen-icons.mjs` fits that file to 16, 32, 48, and 128 and stops if the file is missing. It does not draw a replacement and it does not read a rocket SVG.
 

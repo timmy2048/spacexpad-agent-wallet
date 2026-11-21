@@ -33,7 +33,7 @@ node --experimental-strip-types mcp/src/index.ts
 }
 ```
 
-The process prints a bridge token on stderr and writes `~/.spacexpad-agent-wallet/bridge.json`. The user pastes that token into the extension. Do not put the token in chat. The bridge accepts loopback clients only, and every route except the health check requires the bearer token.
+The process prints a bridge token on stderr and writes `~/.spacexpad-agent-wallet/bridge.json`. The extension adopts that token from the local server on its own. Do not ask the user to paste a bridge token into Settings, and do not put the token in chat. The bridge accepts loopback clients only. `GET /v1/health` and `GET /v1/bootstrap` do not require the bearer token. Every other route does.
 
 Discover tools from the running server. It registers only:
 
@@ -47,7 +47,7 @@ Discover tools from the running server. It registers only:
 
 1. The user copies a prompt from the extension. It contains `PAIR_CODE:`.
 2. Call `spacexpad_pair` with that code and your agent name.
-3. Show the returned `spx_bind_...` token to the user and wait until they paste it into the extension.
+3. Show the returned `spx_bind_...` token to the user and wait until they paste it into the extension bind screen. Do not ask them to paste a bridge token into Settings.
 4. Do not call the other tools until that bind succeeds.
 
 The code expires about 10 minutes after it was copied. The user can remove a binding in the extension.
